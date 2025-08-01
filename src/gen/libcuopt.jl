@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Disable JuliaFormatter for this file.
+#!format: off
+
 """
 A `[`cuOptOptimizationProblem`](@ref)` object contains a representation of an LP or MIP. It is created by `[`cuOptCreateProblem`](@ref)` or `[`cuOptCreateRangedProblem`](@ref)`. It is passed to `[`cuOptSolve`](@ref)`. It should be destroyed using `[`cuOptDestroyProblem`](@ref)`.
 """
@@ -814,4 +817,3 @@ const CUOPT_VALIDATION_ERROR = 4
 const CUOPT_OUT_OF_MEMORY = 5
 
 const CUOPT_RUNTIME_ERROR = 6
-

@@ -30,32 +30,43 @@ function runtests()
     return
 end
 
-
 function test_runtests()
     model = cuOpt.Optimizer()
 
-   MOI.Test.runtests(
-      model,
-       MOI.Test.Config(atol = 1e-3, rtol = 1e-3),
-       exclude = ["test_model_ScalarFunctionConstantNotZero"],
-   )
-  
-   return
+    MOI.Test.runtests(
+        model,
+        MOI.Test.Config(; atol = 1e-3, rtol = 1e-3);
+        exclude = ["test_model_ScalarFunctionConstantNotZero"],
+    )
+
+    return
 end
 
-
 function test_runtests_cache_optimizer()
-    model = MOI.instantiate(cuOpt.Optimizer, with_cache_type = Float64)
+    model = MOI.instantiate(cuOpt.Optimizer; with_cache_type = Float64)
 
     MOI.Test.runtests(
         model,
-        MOI.Test.Config(atol = 1e-3, rtol = 1e-3, exclude = Any[MOI.DualObjectiveValue, MOI.ConstraintPrimal, MOI.ConstraintDual, MOI.ConstraintBasisStatus]),
-        exclude = ["test_constraint_ZeroOne_bounds_3", "test_solve_TerminationStatus_DUAL_INFEASIBLE", "test_unbounded_MAX_SENSE", "test_unbounded_MIN_SENSE"], 
+        MOI.Test.Config(;
+            atol = 1e-3,
+            rtol = 1e-3,
+            exclude = Any[
+                MOI.DualObjectiveValue,
+                MOI.ConstraintPrimal,
+                MOI.ConstraintDual,
+                MOI.ConstraintBasisStatus,
+            ],
+        );
+        exclude = [
+            "test_constraint_ZeroOne_bounds_3",
+            "test_solve_TerminationStatus_DUAL_INFEASIBLE",
+            "test_unbounded_MAX_SENSE",
+            "test_unbounded_MIN_SENSE",
+        ],
     )
     return
 end
 
-end 
-
+end
 
 TestMOIWrapper.runtests()
