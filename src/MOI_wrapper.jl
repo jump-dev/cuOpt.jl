@@ -457,8 +457,6 @@ function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
         return MOI.FEASIBLE_POINT
     elseif status == CUOPT_TERIMINATION_STATUS_INFEASIBLE
         return MOI.INFEASIBLE_POINT
-    elseif status == CUOPT_TERIMINATION_STATUS_UNBOUNDED
-        return MOI.INFEASIBILITY_CERTIFICATE
     end
     return MOI.NO_SOLUTION
 end
