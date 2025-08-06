@@ -30,7 +30,7 @@ Please refer to [NVIDIA cuOpt system requirements](https://docs.nvidia.com/cuopt
 
 To use cuOpt.jl, you must first separately install cuOpt.
 
-**Installing cuOpt requires x86 Linux.**
+**Installing cuOpt requires Linux.**
 
 Please refer to the [NVIDIA cuOpt documentation](https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-c/quick-start.html#installation) for installation instructions.
 
