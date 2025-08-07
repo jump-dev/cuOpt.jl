@@ -32,8 +32,17 @@ function small_test_model()
 end
 
 function test_Direct_C_call()
-    (colcost, collower, colupper, coltype, rowlower, rowupper, astart, aindex, avalue) =
-        small_test_model()
+    (
+        colcost,
+        collower,
+        colupper,
+        coltype,
+        rowlower,
+        rowupper,
+        astart,
+        aindex,
+        avalue,
+    ) = small_test_model()
     n_col = convert(Cint, size(colcost, 1))
     n_row = convert(Cint, size(rowlower, 1))
     n_nz = convert(Cint, size(aindex, 1))
@@ -58,7 +67,22 @@ function test_Direct_C_call()
 
     objective_sense = Int32(cuOpt.CUOPT_MAXIMIZE)
     problem_ref = Ref{cuOpt.cuOptOptimizationProblem}()
-    ret = cuOpt.cuOptCreateRangedProblem(n_row, n_col, objective_sense, 0.0, colcost, matstart, matindex, matvalue, rowlower, rowupper, collower, colupper, coltype, problem_ref)
+    ret = cuOpt.cuOptCreateRangedProblem(
+        n_row,
+        n_col,
+        objective_sense,
+        0.0,
+        colcost,
+        matstart,
+        matindex,
+        matvalue,
+        rowlower,
+        rowupper,
+        collower,
+        colupper,
+        coltype,
+        problem_ref,
+    )
     @test ret == 0
     problem = problem_ref[]
 
@@ -77,9 +101,9 @@ function test_Direct_C_call()
     @test ret == 0
     @test termination_status[] == cuOpt.CUOPT_TERIMINATION_STATUS_OPTIMAL
 
-    cuOpt.cuOptDestroySolution(solution_ref)    
+    cuOpt.cuOptDestroySolution(solution_ref)
     cuOpt.cuOptDestroySolverSettings(settings_ref)
-    cuOpt.cuOptDestroyProblem(problem_ref)
+    return cuOpt.cuOptDestroyProblem(problem_ref)
 end
 
 function runtests()

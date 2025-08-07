@@ -21,18 +21,18 @@ using Libdl
 const libcuopt = let
     libname = Libdl.find_library("libcuopt")
     if isempty(libname)
-        error("Could not find cuOpt library. Please ensure it is installed and in your system's library path.")
+        error(
+            "Could not find cuOpt library. Please ensure it is installed and in your system's library path.",
+        )
     end
     Libdl.dlpath(libname)
 end
-
 
 # Handle INFINITY from C header
 const INFINITY = Inf
 
 include("gen/libcuopt.jl")
 include("MOI_wrapper.jl")
-
 
 import PrecompileTools
 
@@ -86,7 +86,5 @@ PrecompileTools.@setup_workload begin
         end
     end
 end
-
-
 
 end # module cuOpt

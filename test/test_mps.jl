@@ -21,13 +21,12 @@ using Test
 using Base.Filesystem
 
 function test_mps()
-
     mps_file = "air05.mps"
     full_path = joinpath(@__DIR__, "datasets", mps_file)
     model = read_from_file(full_path)
     @test model isa JuMP.Model
     set_optimizer(model, cuOpt.Optimizer)
-    
+
     set_attribute(model, cuOpt.CUOPT_LOG_FILE, "$(splitext(mps_file)[1]).log")
     set_attribute(model, cuOpt.CUOPT_LOG_TO_CONSOLE, false)
     set_attribute(model, cuOpt.CUOPT_TIME_LIMIT, 60.0)
@@ -37,12 +36,11 @@ function test_mps()
 
     # We should get optimal solution for this problem
     @test termination_status(model) == MOI.OPTIMAL
-    @test isapprox(objective_value(model), 26374.0, rtol=1e-4)
+    @test isapprox(objective_value(model), 26374.0, rtol = 1e-4)
 end
 
-
 function runtests()
-    test_mps()
+    return test_mps()
 end
 
 end

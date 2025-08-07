@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 using Clang.Generators
 
 cuopt_include = get(ENV, "CUOPT_INCLUDE_PATH", "")
@@ -22,7 +21,11 @@ c_api = joinpath(cuopt_include, "cuopt/linear_programming/cuopt_c.h")
 build!(
     create_context(
         [c_api],
-        vcat(get_default_args(), "-I$cuopt_include", "-DCUOPT_INSTANTIATE_DOUBLE"),
+        vcat(
+            get_default_args(),
+            "-I$cuopt_include",
+            "-DCUOPT_INSTANTIATE_DOUBLE",
+        ),
         load_options(joinpath(@__DIR__, "generate.toml")),
     ),
 )

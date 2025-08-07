@@ -16,18 +16,10 @@
 import MathOptInterface as MOI
 const CleverDicts = MOI.Utilities.CleverDicts
 
-const _SCALAR_SETS = Union{
-    MOI.GreaterThan{Float64},
-    MOI.LessThan{Float64},
-    MOI.EqualTo{Float64}    
-}
+const _SCALAR_SETS =
+    Union{MOI.GreaterThan{Float64},MOI.LessThan{Float64},MOI.EqualTo{Float64}}
 
-@enum(
-    _RowType,
-    _ROW_TYPE_LESSTHAN,
-    _ROW_TYPE_GREATERTHAN,
-    _ROW_TYPE_EQUAL_TO,
-)
+@enum(_RowType, _ROW_TYPE_LESSTHAN, _ROW_TYPE_GREATERTHAN, _ROW_TYPE_EQUAL_TO,)
 
 _row_type(::MOI.GreaterThan{Float64}) = _ROW_TYPE_GREATERTHAN
 _row_type(::MOI.LessThan{Float64}) = _ROW_TYPE_LESSTHAN
@@ -36,7 +28,6 @@ _row_type(::MOI.EqualTo{Float64}) = _ROW_TYPE_EQUAL_TO
 _bounds(s::MOI.GreaterThan{Float64}) = s.lower, Inf
 _bounds(s::MOI.LessThan{Float64}) = -Inf, s.upper
 _bounds(s::MOI.EqualTo{Float64}) = s.value, s.value
-
 
 @enum(
     _BoundEnum,
@@ -47,13 +38,7 @@ _bounds(s::MOI.EqualTo{Float64}) = s.value, s.value
     _BOUND_EQUAL_TO,
 )
 
-@enum(
-    _TypeEnum,
-    _TYPE_CONTINUOUS,
-    _TYPE_INTEGER,
-    _TYPE_BINARY,
-)
-
+@enum(_TypeEnum, _TYPE_CONTINUOUS, _TYPE_INTEGER, _TYPE_BINARY,)
 
 """
     _VariableInfo
@@ -98,8 +83,6 @@ function _variable_info_dict()
         i -> MOI.VariableIndex(i),
     )
 end
-
-
 
 """
     _ConstraintInfo
@@ -153,7 +136,6 @@ end
 
 @enum(_OptimizeStatus, _OPTIMIZE_NOT_CALLED, _OPTIMIZE_OK, _OPTIMIZE_ERRORED)
 
-
 mutable struct Optimizer <: MOI.AbstractOptimizer
     cuopt_problem::cuOptOptimizationProblem
     cuopt_settings::cuOptSolverSettings
@@ -161,11 +143,11 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 
     name::String
     silent::Bool
-    
+
     variable_info::typeof(_variable_info_dict())
     affine_constraint_info::typeof(_constraint_info_dict())
 
-    raw_optimizer_attributes::Dict{String, Any}
+    raw_optimizer_attributes::Dict{String,Any}
     objective_sense::Union{Nothing,MOI.OptimizationSense}
 
     primal_solution::Vector{Float64}
@@ -174,7 +156,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     obj_value::Float64
     termination_status::Int32
     function Optimizer()
-        model  = new()
+        model = new()
         model.cuopt_problem = cuOptOptimizationProblem(C_NULL)
         model.cuopt_settings = cuOptSolverSettings(C_NULL)
         model.cuopt_solution = cuOptSolution(C_NULL)
@@ -185,7 +167,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         model.variable_info = _variable_info_dict()
         model.affine_constraint_info = _constraint_info_dict()
 
-        model.raw_optimizer_attributes = Dict{String, Any}()
+        model.raw_optimizer_attributes = Dict{String,Any}()
 
         model.objective_sense = nothing
 
@@ -199,9 +181,11 @@ end
 
 MOI.supports_incremental_interface(::Optimizer) = false
 
-
 function MOI.is_empty(model::Optimizer)
-    return length(model.variable_info) == 0 && length(model.affine_constraint_info) == 0 && model.objective_sense == nothing && model.name == ""
+    return length(model.variable_info) == 0 &&
+           length(model.affine_constraint_info) == 0 &&
+           model.objective_sense == nothing &&
+           model.name == ""
 end
 
 """
@@ -243,7 +227,6 @@ function MOI.get(model::Optimizer, ::MOI.Silent)
     return model.silent
 end
 
-
 function MOI.get(model::Optimizer, param::MOI.RawOptimizerAttribute)
     if param.name in keys(model.raw_optimizer_attributes)
         return model.raw_optimizer_attributes[param.name]
@@ -257,7 +240,6 @@ end
 #MOI.get(model::Optimizer, ::MOI.ObjectiveLimit) = model.objective_limit
 #MOI.get(model::Optimizer, ::MOI.SolutionLimit) = model.solution_limit
 #MOI.get(model::Optimizer, ::MOI.NodeLimit) = model.node_limit
-
 
 function MOI.get(model::Optimizer, ::MOI.NumberOfThreads)
     return MOI.get(model, MOI.RawOptimizerAttribute(CUOPT_NUM_CPU_THREADS))
@@ -275,29 +257,36 @@ function MOI.get(model::Optimizer, ::MOI.NumberOfVariables)
     return length(model.variable_info)
 end
 
-
 const _TerminationStatusMap = Dict(
-    CUOPT_TERIMINATION_STATUS_NO_TERMINATION => (MOI.OPTIMIZE_NOT_CALLED, "cuOptModelStatusNotset"),
-    CUOPT_TERIMINATION_STATUS_OPTIMAL => (MOI.OPTIMAL, "cuOptModelStatusOptimal"),
-    CUOPT_TERIMINATION_STATUS_INFEASIBLE => (MOI.INFEASIBLE, "cuOptModelStatusInfeasible"),
-    CUOPT_TERIMINATION_STATUS_UNBOUNDED => (MOI.DUAL_INFEASIBLE, "cuOptModelStatusUnbounded"),
-    CUOPT_TERIMINATION_STATUS_ITERATION_LIMIT => (MOI.ITERATION_LIMIT, "cuOptModelStatusIterationLimit"),
-    CUOPT_TERIMINATION_STATUS_TIME_LIMIT => (MOI.TIME_LIMIT, "cuOptModelStatusTimeLimit"),
-    CUOPT_TERIMINATION_STATUS_NUMERICAL_ERROR => (MOI.NUMERICAL_ERROR, "cuOptModelStatusNumericalError"),
-    CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE => (MOI.OTHER_LIMIT, "cuOptModelStatusPrimalFeasible"),
-    CUOPT_TERIMINATION_STATUS_CONCURRENT_LIMIT => (MOI.OTHER_ERROR, "cuOptModelStatusConcurrent"),
-    CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND => (MOI.OTHER_LIMIT, "cuOptModelStatusFeasible"),
+    CUOPT_TERIMINATION_STATUS_NO_TERMINATION =>
+        (MOI.OPTIMIZE_NOT_CALLED, "cuOptModelStatusNotset"),
+    CUOPT_TERIMINATION_STATUS_OPTIMAL =>
+        (MOI.OPTIMAL, "cuOptModelStatusOptimal"),
+    CUOPT_TERIMINATION_STATUS_INFEASIBLE =>
+        (MOI.INFEASIBLE, "cuOptModelStatusInfeasible"),
+    CUOPT_TERIMINATION_STATUS_UNBOUNDED =>
+        (MOI.DUAL_INFEASIBLE, "cuOptModelStatusUnbounded"),
+    CUOPT_TERIMINATION_STATUS_ITERATION_LIMIT =>
+        (MOI.ITERATION_LIMIT, "cuOptModelStatusIterationLimit"),
+    CUOPT_TERIMINATION_STATUS_TIME_LIMIT =>
+        (MOI.TIME_LIMIT, "cuOptModelStatusTimeLimit"),
+    CUOPT_TERIMINATION_STATUS_NUMERICAL_ERROR =>
+        (MOI.NUMERICAL_ERROR, "cuOptModelStatusNumericalError"),
+    CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE =>
+        (MOI.OTHER_LIMIT, "cuOptModelStatusPrimalFeasible"),
+    CUOPT_TERIMINATION_STATUS_CONCURRENT_LIMIT =>
+        (MOI.OTHER_ERROR, "cuOptModelStatusConcurrent"),
+    CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND =>
+        (MOI.OTHER_LIMIT, "cuOptModelStatusFeasible"),
 )
 
 function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
     return _TerminationStatusMap[model.termination_status][1]
 end
 
-
-function MOI.get(model::Optimizer, ::MOI.RawStatusString)  
+function MOI.get(model::Optimizer, ::MOI.RawStatusString)
     return _TerminationStatusMap[model.termination_status][2]
 end
-
 
 function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
     return model.obj_value
@@ -376,7 +365,7 @@ function MOI.get(model::Optimizer, ::MOI.ListOfModelAttributesSet)
     if MOI.get(model, MOI.Name()) != ""
         push!(attributes, MOI.Name())
     end
-  
+
     return attributes
 end
 
@@ -396,39 +385,23 @@ function MOI.get(
     return MOI.AbstractConstraintAttribute[]
 end
 
-
 function _check_ret(ret::Int32, msg::String)
     if ret == CUOPT_SUCCESS
         return
     elseif ret == CUOPT_INVALID_ARGUMENT
-        error(
-            "Invalid argument in $msg.",
-        )
+        error("Invalid argument in $msg.")
     elseif ret == CUOPT_MPS_FILE_ERROR
-        error(
-            "MPS file open error in $msg.",
-        )
+        error("MPS file open error in $msg.")
     elseif ret == CUOPT_MPS_PARSE_ERROR
-        error(
-            "MPS parse error in $msg.",
-        )   
+        error("MPS parse error in $msg.")
     elseif ret == CUOPT_VALIDATION_ERROR
-        error(
-            "Validation error in $msg.",
-        )
+        error("Validation error in $msg.")
     elseif ret == CUOPT_OUT_OF_MEMORY
-        error(
-            "Out of memory in $msg.",
-        )
+        error("Out of memory in $msg.")
     elseif ret == CUOPT_RUNTIME_ERROR
-        error(
-            "Runtime error in $msg.",
-        )
+        error("Runtime error in $msg.")
     end
 end
-
-
-
 
 function MOI.get(
     model::Optimizer,
@@ -439,21 +412,24 @@ function MOI.get(
     return model.primal_solution[column(model, x)+1]
 end
 
-
 function MOI.get(model::Optimizer, ::MOI.ResultCount)
     status = model.termination_status
-    if status == CUOPT_TERIMINATION_STATUS_OPTIMAL || status == CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE || status == CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND || status == CUOPT_TERIMINATION_STATUS_UNBOUNDED
-        return 1    
+    if status == CUOPT_TERIMINATION_STATUS_OPTIMAL ||
+       status == CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE ||
+       status == CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND ||
+       status == CUOPT_TERIMINATION_STATUS_UNBOUNDED
+        return 1
     end
     return 0
 end
-
 
 function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
     status = model.termination_status
     if attr.result_index != 1
         return MOI.NO_SOLUTION
-    elseif status == CUOPT_TERIMINATION_STATUS_OPTIMAL || status == CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE || status == CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND
+    elseif status == CUOPT_TERIMINATION_STATUS_OPTIMAL ||
+           status == CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE ||
+           status == CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND
         return MOI.FEASIBLE_POINT
     elseif status == CUOPT_TERIMINATION_STATUS_INFEASIBLE
         return MOI.INFEASIBLE_POINT
@@ -473,7 +449,6 @@ function MOI.get(model::Optimizer, attr::MOI.DualStatus)
     return MOI.NO_SOLUTION
 end
 
-
 function MOI.get(model::Optimizer, ::MOI.ObjectiveSense)
     if model.objective_sense !== nothing
         return model.objective_sense
@@ -481,49 +456,77 @@ function MOI.get(model::Optimizer, ::MOI.ObjectiveSense)
     return MOI.MIN_SENSE
 end
 
-
 function MOI.set(model::Optimizer, ::MOI.Name, name::String)
-    model.name = name
+    return model.name = name
 end
 
 function MOI.set(model::Optimizer, ::MOI.Silent, silent::Bool)
-    model.silent = silent 
+    return model.silent = silent
 end
 
 function MOI.set(model::Optimizer, param::MOI.RawOptimizerAttribute, value)
-    model.raw_optimizer_attributes[param.name] = value
+    return model.raw_optimizer_attributes[param.name] = value
 end
 
-
 function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, time_limit::Real)
-    MOI.set(model, MOI.RawOptimizerAttribute(CUOPT_TIME_LIMIT), time_limit)
+    return MOI.set(
+        model,
+        MOI.RawOptimizerAttribute(CUOPT_TIME_LIMIT),
+        time_limit,
+    )
 end
 
 #MOI.set(model::Optimizer, ::MOI.ObjectiveLimit, objective_limit::Float64) = model.objective_limit = objective_limit
 #MOI.set(model::Optimizer, ::MOI.SolutionLimit, solution_limit::Int) = model.solution_limit = solution_limit
 #MOI.set(model::Optimizer, ::MOI.NodeLimit, node_limit::Int) = model.node_limit = node_limit
 
-function MOI.set(model::Optimizer, ::MOI.NumberOfThreads, number_of_threads::Int)
-    MOI.set(model, MOI.RawOptimizerAttribute(CUOPT_NUM_CPU_THREADS), number_of_threads)
+function MOI.set(
+    model::Optimizer,
+    ::MOI.NumberOfThreads,
+    number_of_threads::Int,
+)
+    return MOI.set(
+        model,
+        MOI.RawOptimizerAttribute(CUOPT_NUM_CPU_THREADS),
+        number_of_threads,
+    )
 end
 
-function MOI.set(model::Optimizer, ::MOI.AbsoluteGapTolerance, absolute_gap_tolerance::Float64)
-    MOI.set(model, MOI.RawOptimizerAttribute(CUOPT_MIP_ABSOLUTE_GAP), absolute_gap_tolerance)
+function MOI.set(
+    model::Optimizer,
+    ::MOI.AbsoluteGapTolerance,
+    absolute_gap_tolerance::Float64,
+)
+    return MOI.set(
+        model,
+        MOI.RawOptimizerAttribute(CUOPT_MIP_ABSOLUTE_GAP),
+        absolute_gap_tolerance,
+    )
 end
 
-function MOI.set(model::Optimizer, ::MOI.RelativeGapTolerance, relative_gap_tolerance::Float64)
-    MOI.set(model, MOI.RawOptimizerAttribute(CUOPT_MIP_RELATIVE_GAP), relative_gap_tolerance)
+function MOI.set(
+    model::Optimizer,
+    ::MOI.RelativeGapTolerance,
+    relative_gap_tolerance::Float64,
+)
+    return MOI.set(
+        model,
+        MOI.RawOptimizerAttribute(CUOPT_MIP_RELATIVE_GAP),
+        relative_gap_tolerance,
+    )
 end
 
-function MOI.set(model::Optimizer, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
-
+function MOI.set(
+    model::Optimizer,
+    ::MOI.ObjectiveSense,
+    sense::MOI.OptimizationSense,
+)
     if !(sense in (MOI.MIN_SENSE, MOI.MAX_SENSE))
         throw(MOI.UnsupportedAttribute(MOI.ObjectiveSense()))
     end
 
-    model.objective_sense = sense
+    return model.objective_sense = sense
 end
-
 
 # features that cuOpt supports
 MOI.supports(::Optimizer, ::MOI.Name) = true
@@ -541,7 +544,6 @@ MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 MOI.supports(::Optimizer, ::MOI.ConstraintFunction) = true
 MOI.supports(::Optimizer, ::MOI.DualObjectiveValue) = false
 
-
 function MOI.empty!(model::Optimizer)
     model.name = ""
     # attribute silent should not be cleared
@@ -556,7 +558,7 @@ function MOI.empty!(model::Optimizer)
     if model.cuopt_problem != C_NULL
         a = Ref(model.cuopt_problem)
         cuOptDestroyProblem(a)
-        model.cuopt_problem = C_NULL        
+        model.cuopt_problem = C_NULL
     end
 
     if model.cuopt_settings != C_NULL
@@ -564,7 +566,7 @@ function MOI.empty!(model::Optimizer)
         cuOptDestroySolverSettings(a)
         model.cuopt_settings = C_NULL
     end
-    
+
     if model.cuopt_solution != C_NULL
         a = Ref(model.cuopt_solution)
         cuOptDestroySolution(a)
@@ -610,16 +612,12 @@ function MOI.supports_constraint(
     return true
 end
 
-
 function MOI.supports(
     ::Optimizer,
-    ::Union{
-        MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}},
-    },
+    ::Union{MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}},
 )
     return true
 end
-
 
 function _check_input_data(dest::Optimizer, src::MOI.ModelLike)
     for (F, S) in MOI.get(src, MOI.ListOfConstraintTypesPresent())
@@ -663,7 +661,6 @@ function _check_input_data(dest::Optimizer, src::MOI.ModelLike)
     return
 end
 
-
 function _info(model::Optimizer, key::MOI.VariableIndex)
     info = get(model.variable_info, key, nothing)
     if info === nothing
@@ -671,7 +668,6 @@ function _info(model::Optimizer, key::MOI.VariableIndex)
     end
     return info
 end
-
 
 """
     column(model::Optimizer, x::MOI.VariableIndex)
@@ -692,7 +688,6 @@ function _info(
     return info
 end
 
-
 """
     column(
         model::Optimizer,
@@ -708,7 +703,6 @@ function column(
     return _info(model, c).column
 end
 
-
 function _numcols(model::Optimizer)
     return Int32(length(model.variable_info))
 end
@@ -716,7 +710,6 @@ end
 function _numrows(model::Optimizer)
     return Int32(length(model.affine_constraint_info))
 end
-
 
 function _copy_to_columns(dest::Optimizer, src::MOI.ModelLike, mapping)
     x_src = MOI.get(src, MOI.ListOfVariableIndices())
@@ -752,7 +745,6 @@ function _add_bounds(lb, ub, i, s::MOI.EqualTo{Float64})
     return
 end
 
-
 function _throw_if_existing_lower(
     info::_VariableInfo,
     ::S,
@@ -780,7 +772,6 @@ function _throw_if_existing_upper(
     end
     return
 end
-
 
 function _update_info(info::_VariableInfo, s::MOI.GreaterThan{Float64})
     _throw_if_existing_lower(info, s)
@@ -835,8 +826,6 @@ function _extract_bound_data(
     return
 end
 
-
-
 _add_sizehint!(vec, n) = sizehint!(vec, length(vec) + n)
 
 function _extract_row_data(
@@ -881,7 +870,10 @@ function _extract_row_data(
     nnz = constraint_matrix_row_offsets[end]
     for f in fs
         for term in f.terms
-            push!(constraint_matrix_column_indices, Int32(mapping[term.variable].value) - 1)
+            push!(
+                constraint_matrix_column_indices,
+                Int32(mapping[term.variable].value) - 1,
+            )
             push!(constraint_matrix_coefficients, term.coefficient)
             nnz += 1
         end
@@ -891,20 +883,19 @@ function _extract_row_data(
     return
 end
 
-
 function _get_objective_data(
-    dest::Optimizer, 
-    src::MOI.ModelLike, 
+    dest::Optimizer,
+    src::MOI.ModelLike,
     mapping,
-    numcol::Int32
-)    
+    numcol::Int32,
+)
     sense = MOI.get(src, MOI.ObjectiveSense())
     if !(sense in (MOI.MIN_SENSE, MOI.MAX_SENSE))
         throw(MOI.UnsupportedAttribute(MOI.ObjectiveSense()))
     end
 
     objective_sense = sense == MOI.MIN_SENSE ? CUOPT_MINIMIZE : CUOPT_MAXIMIZE
-    
+
     objective_coefficients = zeros(Float64, numcol)
     F = MOI.get(src, MOI.ObjectiveFunctionType())
     f_obj = MOI.get(src, MOI.ObjectiveFunction{F}())
@@ -918,32 +909,37 @@ function _get_objective_data(
     return objective_sense, objective_offset, objective_coefficients
 end
 
-
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
-  
     MOI.empty!(dest)
     _check_input_data(dest, src)
-    
+
     mapping = MOI.Utilities.IndexMap()
     numcol = _copy_to_columns(dest, src, mapping)
-    
+
     collower, colupper = fill(-Inf, numcol), fill(Inf, numcol)
     rowlower, rowupper = Float64[], Float64[]
-    
+
     constraint_matrix_row_offsets = Int32[]
     constraint_matrix_column_indices = Int32[]
     constraint_matrix_coefficients = Float64[]
 
     push!(constraint_matrix_row_offsets, 0)
-    for S in (
-        MOI.GreaterThan{Float64},
-        MOI.LessThan{Float64},
-        MOI.EqualTo{Float64},
-    )
+    for S in
+        (MOI.GreaterThan{Float64}, MOI.LessThan{Float64}, MOI.EqualTo{Float64})
         _extract_bound_data(dest, src, mapping, collower, colupper, S)
-        _extract_row_data(dest, src, mapping, rowlower, rowupper, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficients, S)
+        _extract_row_data(
+            dest,
+            src,
+            mapping,
+            rowlower,
+            rowupper,
+            constraint_matrix_row_offsets,
+            constraint_matrix_column_indices,
+            constraint_matrix_coefficients,
+            S,
+        )
     end
-    
+
     numrow = Int32(length(rowlower))
     # Extract integrality constraints
     var_type = fill(Cchar('C'), numcol)
@@ -954,8 +950,8 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
         var_type[info.column+1] = Cchar('I')
         new_x = mapping[MOI.VariableIndex(ci.value)]
         mapping[ci] = typeof(ci)(new_x.value)
-        collower[info.column+1] = ceil(max(0., collower[info.column+1]))
-        colupper[info.column+1] = floor(min(1., colupper[info.column+1]))
+        collower[info.column+1] = ceil(max(0.0, collower[info.column+1]))
+        colupper[info.column+1] = floor(min(1.0, colupper[info.column+1]))
         has_integrality = true
     end
     for ci in _constraints(src, MOI.VariableIndex, MOI.Integer)
@@ -967,10 +963,9 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
         has_integrality = true
     end
 
+    objective_sense, objective_offset, objective_coefficients =
+        _get_objective_data(dest, src, mapping, numcol)
 
-    objective_sense, objective_offset, objective_coefficients = _get_objective_data(dest, src, mapping, numcol)
-
-    
     ref_problem = Ref{cuOptOptimizationProblem}()
     ret = cuOptCreateRangedProblem(
         numrow,
@@ -986,7 +981,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
         collower,
         colupper,
         var_type,
-        ref_problem
+        ref_problem,
     )
     _check_ret(ret, "cuOptCreateRangedProblem")
     dest.cuopt_problem = ref_problem[]
@@ -994,7 +989,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
     ref_settings = Ref{cuOptSolverSettings}()
     ret = cuOptCreateSolverSettings(ref_settings)
     _check_ret(ret, "cuOptCreateSolverSettings")
-    dest.cuopt_settings = ref_settings[]    
+    dest.cuopt_settings = ref_settings[]
 
     # Set all raw optimizer attributes
     for (name, value) in dest.raw_optimizer_attributes
@@ -1004,7 +999,8 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
 
     # Override log info if silent is set
     if dest.silent
-        ret = cuOptSetParameter(dest.cuopt_settings, "log_to_console", string(0))
+        ret =
+            cuOptSetParameter(dest.cuopt_settings, "log_to_console", string(0))
         _check_ret(ret, "cuOptSetParameter(log_to_console, 0)")
         ret = cuOptSetParameter(dest.cuopt_settings, "log_file", "")
         _check_ret(ret, "cuOptSetParameter(log_file, )")
@@ -1012,7 +1008,6 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
 
     return mapping
 end
-
 
 function MOI.optimize!(model::Optimizer)
     ref_solution = Ref{cuOptSolution}()
@@ -1031,8 +1026,8 @@ function MOI.optimize!(model::Optimizer)
     model.obj_value = obj_value[1]
 
     model.primal_solution = zeros(_numcols(model))
-    model.dual_solution = zeros(_numrows(model))        
-    
+    model.dual_solution = zeros(_numrows(model))
+
     ret = cuOptGetPrimalSolution(model.cuopt_solution, model.primal_solution)
     _check_ret(ret, "cuOptGetPrimalSolution")
 
