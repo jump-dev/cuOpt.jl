@@ -46,4 +46,3 @@ jobs:
       - run: julia --color=yes --project=. -e 'using cuOpt'
         env:
           JULIA_REGISTRYCI_AUTOMERGE: true
-          
