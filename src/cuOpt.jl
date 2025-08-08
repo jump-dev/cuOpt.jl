@@ -98,6 +98,16 @@ end
 PrecompileTools.@setup_workload begin
     PrecompileTools.@compile_workload begin
         if get(ENV, "JULIA_REGISTRYCI_AUTOMERGE", "false") != "true"
+            # Try to initialize libcuopt for precompilation
+            if !isdefined(cuOpt, :libcuopt)
+                try
+                    # Call __init__() to set up libcuopt
+                    __init__()
+                catch e
+                    # If __init__ fails, skip precompilation
+                    return
+                end
+            end
             _precompile()
         end
     end
