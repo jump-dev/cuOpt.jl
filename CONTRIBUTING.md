@@ -13,6 +13,14 @@
   Signed-off-by: Your Name <your@email.com>
   ```
 
+* Please enable sign-off requirement as follows:
+
+```
+./enable_signoff_requirement.sh
+```
+
+This should add hook which will check for sign-off, if it is not present it will error.
+
 * Full text of the DCO:
 
   ```
