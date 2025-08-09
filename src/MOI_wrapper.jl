@@ -1,5 +1,7 @@
-# Copyright (c) Mathieu Besançon, Oscar Dowson, and contributors
-# Licensed under the MIT License. See LICENSE_MIT_HIGHS.txt for details.
+# Copyright (c) 2019 Mathieu Besançon, Oscar Dowson, and contributors
+#
+# Use of this source code is governed by an MIT-style license that can be found
+# in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 #
 # Modifications by Ramakrishna Prabhu, Rajesh Gandham from NVIDIA 2025.
 #
