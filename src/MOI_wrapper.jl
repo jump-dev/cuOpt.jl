@@ -1,10 +1,3 @@
-# Copyright (c) 2019 Mathieu Besançon, Oscar Dowson, and contributors
-#
-# Use of this source code is governed by an MIT-style license that can be found
-# in the LICENSE.md file or at https://opensource.org/licenses/MIT.
-#
-# Modifications by Ramakrishna Prabhu, Rajesh Gandham from NVIDIA 2025.
-#
 # SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -12,13 +5,18 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# This file is a modification of the MOI wrapper for HiGHS.jl, which can be
+# found at https://github.com/jump-dev/HiGHS.jl/blob/master/src/MOI_wrapper.jl
+# The HiGHS wrapper is released under an MIT license, a copy of which can be
+# found in `/thirdparty/THIRD_PARTY_LICENSES` or at https://opensource.org/licenses/MIT.
 
 import MathOptInterface as MOI
 const CleverDicts = MOI.Utilities.CleverDicts
