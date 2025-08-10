@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This file is a modification of the MOI wrapper for HiGHS.jl, which can be
+# found at https://github.com/jump-dev/HiGHS.jl/blob/master/src/MOI_wrapper.jl
+# The HiGHS wrapper is released under an MIT license, a copy of which can be
+# found in `/thirdparty/THIRD_PARTY_LICENSES` or at https://opensource.org/licenses/MIT.
+
 import MathOptInterface as MOI
 const CleverDicts = MOI.Utilities.CleverDicts
 
