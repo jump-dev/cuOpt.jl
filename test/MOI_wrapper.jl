@@ -67,6 +67,19 @@ function test_runtests_cache_optimizer()
     return
 end
 
+function test_air05()
+    src = MOI.FileFormats.MPS.Model()
+    MOI.read_from_file(src, joinpath(@__DIR__, "datasets", "air05.mps"))
+    model = cuOpt.Optimizer()
+    MOI.set(model, MOI.RawOptimizerAttribute(cuOpt.CUOPT_LOG_TO_CONSOLE), false)
+    MOI.set(model, MOI.RawOptimizerAttribute(cuOpt.CUOPT_TIME_LIMIT), 60.0)
+    MOI.copy_to(model, src)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 26374.0; rtol = 1e-4)
+    return
 end
+
+end  # TestMOIWrapper
 
 TestMOIWrapper.runtests()
