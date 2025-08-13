@@ -66,7 +66,7 @@ model = Model(cuOpt.Optimizer)
 optimize!(model)
 ```
 
-## Resources
+## Documentation
 
-- [NVIDIA cuOpt documentation](https://docs.nvidia.com/cuopt/user-guide/latest/)
-- Julia examples can be found in the [cuOpt examples GitHub repository](https://github.com/NVIDIA/cuopt-examples/).
+See the [NVIDIA cuOpt documentation](https://docs.nvidia.com/cuopt/user-guide/latest/)
+for more details.
