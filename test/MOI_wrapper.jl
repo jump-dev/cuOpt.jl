@@ -17,34 +17,32 @@ module TestMOIWrapper
 
 using Test
 
-using cuOpt
+import cuOpt
 import MathOptInterface as MOI
 
 function runtests()
     for name in names(@__MODULE__; all = true)
-        if !startswith("$(name)", "test_")
-            continue
+        if startswith("$(name)", "test_")
+            @testset "$name" begin
+                getfield(@__MODULE__, name)()
+            end
         end
-        getfield(@__MODULE__, name)()
     end
     return
 end
 
 function test_runtests()
     model = cuOpt.Optimizer()
-
     MOI.Test.runtests(
         model,
         MOI.Test.Config(; atol = 1e-3, rtol = 1e-3);
         exclude = ["test_model_ScalarFunctionConstantNotZero"],
     )
-
     return
 end
 
 function test_runtests_cache_optimizer()
     model = MOI.instantiate(cuOpt.Optimizer; with_cache_type = Float64)
-
     MOI.Test.runtests(
         model,
         MOI.Test.Config(;
@@ -58,10 +56,10 @@ function test_runtests_cache_optimizer()
             ],
         );
         exclude = [
+            # Upstream bug: https://github.com/NVIDIA/cuopt/issues/260
             "test_constraint_ZeroOne_bounds_3",
+            # Upstream bug: https://github.com/NVIDIA/cuopt/issues/112
             "test_solve_TerminationStatus_DUAL_INFEASIBLE",
-            "test_unbounded_MAX_SENSE",
-            "test_unbounded_MIN_SENSE",
         ],
     )
     return
