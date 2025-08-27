@@ -26,7 +26,7 @@ If you encounter a reproducible bug, feel free to open a [GitHub issue](https://
 
 Please refer to [NVIDIA cuOpt system requirements](https://docs.nvidia.com/cuopt/user-guide/latest/system-requirements.html).
 
-## Intallation
+## Installation
 
 To use cuOpt.jl, you must first separately install cuOpt.
 
