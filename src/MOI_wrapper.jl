@@ -996,7 +996,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
 
     # Set all raw optimizer attributes
     for (name, value) in dest.raw_optimizer_attributes
-        if value != Nothing
+        if value !== nothing
             ret = cuOptSetParameter(dest.cuopt_settings, name, string(value))
             _check_ret(ret, "cuOptSetParameter($name, $value)")
         end
