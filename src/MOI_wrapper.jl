@@ -172,12 +172,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         model.variable_info = _variable_info_dict()
         model.affine_constraint_info = _constraint_info_dict()
 
-        model.raw_optimizer_attributes = Dict{String,Any}(
-            CUOPT_TIME_LIMIT => 36000,
-            CUOPT_NUM_CPU_THREADS => 1,
-            CUOPT_MIP_ABSOLUTE_GAP => 1e-10,
-            CUOPT_MIP_RELATIVE_GAP => 1e-4,
-        )
+        model.raw_optimizer_attributes = Dict{String,Any}()
 
         model.objective_sense = nothing
 
@@ -476,7 +471,7 @@ function MOI.set(model::Optimizer, param::MOI.RawOptimizerAttribute, value)
     return model.raw_optimizer_attributes[param.name] = value
 end
 
-function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, time_limit::Real)
+function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, time_limit::Union{Real, Nothing})
     return MOI.set(
         model,
         MOI.RawOptimizerAttribute(CUOPT_TIME_LIMIT),
@@ -491,7 +486,7 @@ end
 function MOI.set(
     model::Optimizer,
     ::MOI.NumberOfThreads,
-    number_of_threads::Int,
+    number_of_threads::Union{Int, Nothing},
 )
     return MOI.set(
         model,
@@ -503,7 +498,7 @@ end
 function MOI.set(
     model::Optimizer,
     ::MOI.AbsoluteGapTolerance,
-    absolute_gap_tolerance::Float64,
+    absolute_gap_tolerance::Union{Float64, Nothing},
 )
     return MOI.set(
         model,
@@ -515,7 +510,7 @@ end
 function MOI.set(
     model::Optimizer,
     ::MOI.RelativeGapTolerance,
-    relative_gap_tolerance::Float64,
+    relative_gap_tolerance::Union{Float64, Nothing},
 )
     return MOI.set(
         model,
@@ -1001,8 +996,10 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
 
     # Set all raw optimizer attributes
     for (name, value) in dest.raw_optimizer_attributes
-        ret = cuOptSetParameter(dest.cuopt_settings, name, string(value))
-        _check_ret(ret, "cuOptSetParameter($name, $value)")
+        if value != Nothing
+            ret = cuOptSetParameter(dest.cuopt_settings, name, string(value))
+            _check_ret(ret, "cuOptSetParameter($name, $value)")
+        end
     end
 
     # Override log info if silent is set
