@@ -471,7 +471,11 @@ function MOI.set(model::Optimizer, param::MOI.RawOptimizerAttribute, value)
     return model.raw_optimizer_attributes[param.name] = value
 end
 
-function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, time_limit::Union{Real, Nothing})
+function MOI.set(
+    model::Optimizer,
+    ::MOI.TimeLimitSec,
+    time_limit::Union{Real,Nothing},
+)
     return MOI.set(
         model,
         MOI.RawOptimizerAttribute(CUOPT_TIME_LIMIT),
@@ -486,7 +490,7 @@ end
 function MOI.set(
     model::Optimizer,
     ::MOI.NumberOfThreads,
-    number_of_threads::Union{Int, Nothing},
+    number_of_threads::Union{Int,Nothing},
 )
     return MOI.set(
         model,
@@ -498,7 +502,7 @@ end
 function MOI.set(
     model::Optimizer,
     ::MOI.AbsoluteGapTolerance,
-    absolute_gap_tolerance::Union{Float64, Nothing},
+    absolute_gap_tolerance::Union{Float64,Nothing},
 )
     return MOI.set(
         model,
@@ -510,7 +514,7 @@ end
 function MOI.set(
     model::Optimizer,
     ::MOI.RelativeGapTolerance,
-    relative_gap_tolerance::Union{Float64, Nothing},
+    relative_gap_tolerance::Union{Float64,Nothing},
 )
     return MOI.set(
         model,
