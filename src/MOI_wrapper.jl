@@ -173,7 +173,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         model.affine_constraint_info = _constraint_info_dict()
 
         model.raw_optimizer_attributes = Dict{String,Any}(
-            CUOPT_TIME_LIMIT => 3600,
+            CUOPT_TIME_LIMIT => 36000,
             CUOPT_NUM_CPU_THREADS => 1,
             CUOPT_MIP_ABSOLUTE_GAP => 1e-10,
             CUOPT_MIP_RELATIVE_GAP => 1e-4,
