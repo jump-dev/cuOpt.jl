@@ -48,7 +48,7 @@ To install cuOpt on [Google Colab](https://colab.research.google.com), do:
 ```julia
 julia> cmd = run(`pip install --extra-index-url=https://pypi.nvidia.com libcuopt-cu12==25.8.\* nvidia-cuda-runtime-cu12==12.8.\*`);
 
-julia> ENV["LD_LIBRARY_PATH"] = "/usr/lib64-nvidia;/usr/local/lib/python3.11/dist-packages/libcuopt/lib64"
+julia> push!(Base.DL_LOAD_PATH, "/usr/local/lib/python3.12/dist-packages/libcuopt/lib64")
 ```
 
 ## Use with JuMP
