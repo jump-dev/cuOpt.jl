@@ -36,35 +36,22 @@ function __init__()
         )
     end
     global libcuopt = Libdl.dlpath(libname)
-
-    # Check library version
-    version_major = Ref{Int32}(0)
-    version_minor = Ref{Int32}(0)
-    version_patch = Ref{Int32}(0)
-
-    # Note: We need to call cuOptGetVersion after libcuopt is set
-    status = ccall(
-        (:cuOptGetVersion, libcuopt),
-        Int32,
-        (Ptr{Int32}, Ptr{Int32}, Ptr{Int32}),
-        version_major,
-        version_minor,
-        version_patch,
-    )
-
+    major, minor, patch = Ref{Int32}(0), Ref{Int32}(0), Ref{Int32}(0)
+    status = @ccall libcuopt.cuOptGetVersion(
+        major::Ptr{Int32},
+        minor::Ptr{Int32},
+        patch::Ptr{Int32},
+    )::Int32
     if status != 0
         error("Failed to get cuOpt library version (status code: $status)")
     end
-
-    expected_major = 25
-    expected_minor = 10
-
-    if version_major[] != expected_major || version_minor[] != expected_minor
+    version = VersionNumber(major[], minor[], patch[])
+    min, max = v"25.05", v"25.10" 
+    if !(min <= version <= max)
         error(
-            "Incompatible cuOpt library version. Expected $(expected_major).$(expected_minor), but found $(version_major[]).$(version_minor[]).$(version_patch[])",
+            "Incompatible cuOpt library version. Got $version, but supported versions are between $min and $max",
         )
     end
-
     return
 end
 
