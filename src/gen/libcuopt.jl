@@ -1,21 +1,3 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# Disable JuliaFormatter for this file.
-#!format: off
-
 """
 A `[`cuOptOptimizationProblem`](@ref)` object contains a representation of an LP or MIP. It is created by `[`cuOptCreateProblem`](@ref)` or `[`cuOptCreateRangedProblem`](@ref)`. It is passed to `[`cuOptSolve`](@ref)`. It should be destroyed using `[`cuOptDestroyProblem`](@ref)`.
 """
@@ -734,6 +716,24 @@ const CUOPT_LOG_TO_CONSOLE = "log_to_console"
 
 const CUOPT_CROSSOVER = "crossover"
 
+const CUOPT_FOLDING = "folding"
+
+const CUOPT_AUGMENTED = "augmented"
+
+const CUOPT_DUALIZE = "dualize"
+
+const CUOPT_ORDERING = "ordering"
+
+const CUOPT_BARRIER_DUAL_INITIAL_POINT = "barrier_dual_initial_point"
+
+const CUOPT_ELIMINATE_DENSE_COLUMNS = "eliminate_dense_columns"
+
+const CUOPT_CUDSS_DETERMINISTIC = "cudss_deterministic"
+
+const CUOPT_PRESOLVE = "presolve"
+
+const CUOPT_DUAL_POSTSOLVE = "dual_postsolve"
+
 const CUOPT_MIP_ABSOLUTE_TOLERANCE = "mip_absolute_tolerance"
 
 const CUOPT_MIP_RELATIVE_TOLERANCE = "mip_relative_tolerance"
@@ -747,6 +747,8 @@ const CUOPT_MIP_RELATIVE_GAP = "mip_relative_gap"
 const CUOPT_MIP_HEURISTICS_ONLY = "mip_heuristics_only"
 
 const CUOPT_MIP_SCALING = "mip_scaling"
+
+const CUOPT_MIP_PRESOLVE = "mip_presolve"
 
 const CUOPT_SOLUTION_FILE = "solution_file"
 
@@ -798,11 +800,15 @@ const CUOPT_PDLP_SOLVER_MODE_METHODICAL1 = 2
 
 const CUOPT_PDLP_SOLVER_MODE_FAST1 = 3
 
+const CUOPT_PDLP_SOLVER_MODE_STABLE3 = 4
+
 const CUOPT_METHOD_CONCURRENT = 0
 
 const CUOPT_METHOD_PDLP = 1
 
 const CUOPT_METHOD_DUAL_SIMPLEX = 2
+
+const CUOPT_METHOD_BARRIER = 3
 
 const CUOPT_SUCCESS = 0
 
@@ -817,3 +823,4 @@ const CUOPT_VALIDATION_ERROR = 4
 const CUOPT_OUT_OF_MEMORY = 5
 
 const CUOPT_RUNTIME_ERROR = 6
+
