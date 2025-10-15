@@ -1,3 +1,21 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Disable JuliaFormatter for this file.
+#!format: off
+
 """
 A `[`cuOptOptimizationProblem`](@ref)` object contains a representation of an LP or MIP. It is created by `[`cuOptCreateProblem`](@ref)` or `[`cuOptCreateRangedProblem`](@ref)`. It is passed to `[`cuOptSolve`](@ref)`. It should be destroyed using `[`cuOptDestroyProblem`](@ref)`.
 """
@@ -33,7 +51,7 @@ Get the size of the float type.
 The size in bytes of the float type.
 """
 function cuOptGetFloatSize()
-    return ccall((:cuOptGetFloatSize, libcuopt), Int8, ())
+    ccall((:cuOptGetFloatSize, libcuopt), Int8, ())
 end
 
 # no prototype is found for this function at cuopt_c.h:94:8, please use with caution
@@ -46,7 +64,7 @@ Get the size of the integer type used by the library.
 The size of the integer type in bytes.
 """
 function cuOptGetIntSize()
-    return ccall((:cuOptGetIntSize, libcuopt), Int8, ())
+    ccall((:cuOptGetIntSize, libcuopt), Int8, ())
 end
 
 """
@@ -62,14 +80,7 @@ Get the version of the library.
 A status code indicating success or failure.
 """
 function cuOptGetVersion(version_major, version_minor, version_patch)
-    return ccall(
-        (:cuOptGetVersion, libcuopt),
-        cuopt_int_t,
-        (Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}),
-        version_major,
-        version_minor,
-        version_patch,
-    )
+    ccall((:cuOptGetVersion, libcuopt), cuopt_int_t, (Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}), version_major, version_minor, version_patch)
 end
 
 """
@@ -84,13 +95,7 @@ Read an optimization problem from an MPS file.
 A status code indicating success or failure.
 """
 function cuOptReadProblem(filename, problem_ptr)
-    return ccall(
-        (:cuOptReadProblem, libcuopt),
-        cuopt_int_t,
-        (Ptr{Cchar}, Ptr{cuOptOptimizationProblem}),
-        filename,
-        problem_ptr,
-    )
+    ccall((:cuOptReadProblem, libcuopt), cuopt_int_t, (Ptr{Cchar}, Ptr{cuOptOptimizationProblem}), filename, problem_ptr)
 end
 
 """
@@ -123,56 +128,8 @@ Create an optimization problem of the form
 # Returns
 [`CUOPT_SUCCESS`](@ref) if successful, CUOPT\\_ERROR otherwise
 """
-function cuOptCreateProblem(
-    num_constraints,
-    num_variables,
-    objective_sense,
-    objective_offset,
-    objective_coefficients,
-    constraint_matrix_row_offsets,
-    constraint_matrix_column_indices,
-    constraint_matrix_coefficent_values,
-    constraint_sense,
-    rhs,
-    lower_bounds,
-    upper_bounds,
-    variable_types,
-    problem_ptr,
-)
-    return ccall(
-        (:cuOptCreateProblem, libcuopt),
-        cuopt_int_t,
-        (
-            cuopt_int_t,
-            cuopt_int_t,
-            cuopt_int_t,
-            cuopt_float_t,
-            Ptr{cuopt_float_t},
-            Ptr{cuopt_int_t},
-            Ptr{cuopt_int_t},
-            Ptr{cuopt_float_t},
-            Ptr{Cchar},
-            Ptr{cuopt_float_t},
-            Ptr{cuopt_float_t},
-            Ptr{cuopt_float_t},
-            Ptr{Cchar},
-            Ptr{cuOptOptimizationProblem},
-        ),
-        num_constraints,
-        num_variables,
-        objective_sense,
-        objective_offset,
-        objective_coefficients,
-        constraint_matrix_row_offsets,
-        constraint_matrix_column_indices,
-        constraint_matrix_coefficent_values,
-        constraint_sense,
-        rhs,
-        lower_bounds,
-        upper_bounds,
-        variable_types,
-        problem_ptr,
-    )
+function cuOptCreateProblem(num_constraints, num_variables, objective_sense, objective_offset, objective_coefficients, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficent_values, constraint_sense, rhs, lower_bounds, upper_bounds, variable_types, problem_ptr)
+    ccall((:cuOptCreateProblem, libcuopt), cuopt_int_t, (cuopt_int_t, cuopt_int_t, cuopt_int_t, cuopt_float_t, Ptr{cuopt_float_t}, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}, Ptr{Cchar}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{Cchar}, Ptr{cuOptOptimizationProblem}), num_constraints, num_variables, objective_sense, objective_offset, objective_coefficients, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficent_values, constraint_sense, rhs, lower_bounds, upper_bounds, variable_types, problem_ptr)
 end
 
 """
@@ -205,56 +162,8 @@ Create an optimization problem of the form *
 # Returns
 A status code indicating success or failure.
 """
-function cuOptCreateRangedProblem(
-    num_constraints,
-    num_variables,
-    objective_sense,
-    objective_offset,
-    objective_coefficients,
-    constraint_matrix_row_offsets,
-    constraint_matrix_column_indices,
-    constraint_matrix_coefficients,
-    constraint_lower_bounds,
-    constraint_upper_bounds,
-    variable_lower_bounds,
-    variable_upper_bounds,
-    variable_types,
-    problem_ptr,
-)
-    return ccall(
-        (:cuOptCreateRangedProblem, libcuopt),
-        cuopt_int_t,
-        (
-            cuopt_int_t,
-            cuopt_int_t,
-            cuopt_int_t,
-            cuopt_float_t,
-            Ptr{cuopt_float_t},
-            Ptr{cuopt_int_t},
-            Ptr{cuopt_int_t},
-            Ptr{cuopt_float_t},
-            Ptr{cuopt_float_t},
-            Ptr{cuopt_float_t},
-            Ptr{cuopt_float_t},
-            Ptr{cuopt_float_t},
-            Ptr{Cchar},
-            Ptr{cuOptOptimizationProblem},
-        ),
-        num_constraints,
-        num_variables,
-        objective_sense,
-        objective_offset,
-        objective_coefficients,
-        constraint_matrix_row_offsets,
-        constraint_matrix_column_indices,
-        constraint_matrix_coefficients,
-        constraint_lower_bounds,
-        constraint_upper_bounds,
-        variable_lower_bounds,
-        variable_upper_bounds,
-        variable_types,
-        problem_ptr,
-    )
+function cuOptCreateRangedProblem(num_constraints, num_variables, objective_sense, objective_offset, objective_coefficients, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficients, constraint_lower_bounds, constraint_upper_bounds, variable_lower_bounds, variable_upper_bounds, variable_types, problem_ptr)
+    ccall((:cuOptCreateRangedProblem, libcuopt), cuopt_int_t, (cuopt_int_t, cuopt_int_t, cuopt_int_t, cuopt_float_t, Ptr{cuopt_float_t}, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{Cchar}, Ptr{cuOptOptimizationProblem}), num_constraints, num_variables, objective_sense, objective_offset, objective_coefficients, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficients, constraint_lower_bounds, constraint_upper_bounds, variable_lower_bounds, variable_upper_bounds, variable_types, problem_ptr)
 end
 
 """
@@ -266,12 +175,7 @@ Destroy an optimization problem
 * `problem_ptr`:\\[in,out\\] - A pointer to a [`cuOptOptimizationProblem`](@ref). On output the problem will be destroyed, and the pointer will be set to NULL.
 """
 function cuOptDestroyProblem(problem_ptr)
-    return ccall(
-        (:cuOptDestroyProblem, libcuopt),
-        Cvoid,
-        (Ptr{cuOptOptimizationProblem},),
-        problem_ptr,
-    )
+    ccall((:cuOptDestroyProblem, libcuopt), Cvoid, (Ptr{cuOptOptimizationProblem},), problem_ptr)
 end
 
 """
@@ -286,13 +190,7 @@ Get the number of constraints of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetNumConstraints(problem, num_constraints_ptr)
-    return ccall(
-        (:cuOptGetNumConstraints, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_int_t}),
-        problem,
-        num_constraints_ptr,
-    )
+    ccall((:cuOptGetNumConstraints, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}), problem, num_constraints_ptr)
 end
 
 """
@@ -307,13 +205,7 @@ Get the number of variables of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetNumVariables(problem, num_variables_ptr)
-    return ccall(
-        (:cuOptGetNumVariables, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_int_t}),
-        problem,
-        num_variables_ptr,
-    )
+    ccall((:cuOptGetNumVariables, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}), problem, num_variables_ptr)
 end
 
 """
@@ -328,13 +220,7 @@ Get the objective sense of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetObjectiveSense(problem, objective_sense_ptr)
-    return ccall(
-        (:cuOptGetObjectiveSense, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_int_t}),
-        problem,
-        objective_sense_ptr,
-    )
+    ccall((:cuOptGetObjectiveSense, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}), problem, objective_sense_ptr)
 end
 
 """
@@ -349,13 +235,7 @@ Get the objective offset of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetObjectiveOffset(problem, objective_offset_ptr)
-    return ccall(
-        (:cuOptGetObjectiveOffset, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_float_t}),
-        problem,
-        objective_offset_ptr,
-    )
+    ccall((:cuOptGetObjectiveOffset, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_float_t}), problem, objective_offset_ptr)
 end
 
 """
@@ -370,13 +250,7 @@ Get the objective coefficients of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetObjectiveCoefficients(problem, objective_coefficients_ptr)
-    return ccall(
-        (:cuOptGetObjectiveCoefficients, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_float_t}),
-        problem,
-        objective_coefficients_ptr,
-    )
+    ccall((:cuOptGetObjectiveCoefficients, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_float_t}), problem, objective_coefficients_ptr)
 end
 
 """
@@ -391,13 +265,7 @@ Get the number of non-zero elements in the constraint matrix of an optimization 
 A status code indicating success or failure.
 """
 function cuOptGetNumNonZeros(problem, num_non_zeros_ptr)
-    return ccall(
-        (:cuOptGetNumNonZeros, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_int_t}),
-        problem,
-        num_non_zeros_ptr,
-    )
+    ccall((:cuOptGetNumNonZeros, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}), problem, num_non_zeros_ptr)
 end
 
 """
@@ -413,26 +281,8 @@ Get the constraint matrix of an optimization problem in compressed sparse row fo
 # Returns
 A status code indicating success or failure.
 """
-function cuOptGetConstraintMatrix(
-    problem,
-    constraint_matrix_row_offsets_ptr,
-    constraint_matrix_column_indices_ptr,
-    constraint_matrix_coefficients_ptr,
-)
-    return ccall(
-        (:cuOptGetConstraintMatrix, libcuopt),
-        cuopt_int_t,
-        (
-            cuOptOptimizationProblem,
-            Ptr{cuopt_int_t},
-            Ptr{cuopt_int_t},
-            Ptr{cuopt_float_t},
-        ),
-        problem,
-        constraint_matrix_row_offsets_ptr,
-        constraint_matrix_column_indices_ptr,
-        constraint_matrix_coefficients_ptr,
-    )
+function cuOptGetConstraintMatrix(problem, constraint_matrix_row_offsets_ptr, constraint_matrix_column_indices_ptr, constraint_matrix_coefficients_ptr)
+    ccall((:cuOptGetConstraintMatrix, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}), problem, constraint_matrix_row_offsets_ptr, constraint_matrix_column_indices_ptr, constraint_matrix_coefficients_ptr)
 end
 
 """
@@ -447,13 +297,7 @@ Get the constraint sense of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetConstraintSense(problem, constraint_sense_ptr)
-    return ccall(
-        (:cuOptGetConstraintSense, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{Cchar}),
-        problem,
-        constraint_sense_ptr,
-    )
+    ccall((:cuOptGetConstraintSense, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{Cchar}), problem, constraint_sense_ptr)
 end
 
 """
@@ -468,13 +312,7 @@ Get the right-hand side of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetConstraintRightHandSide(problem, rhs_ptr)
-    return ccall(
-        (:cuOptGetConstraintRightHandSide, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_float_t}),
-        problem,
-        rhs_ptr,
-    )
+    ccall((:cuOptGetConstraintRightHandSide, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_float_t}), problem, rhs_ptr)
 end
 
 """
@@ -489,13 +327,7 @@ Get the lower bounds of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetConstraintLowerBounds(problem, lower_bounds_ptr)
-    return ccall(
-        (:cuOptGetConstraintLowerBounds, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_float_t}),
-        problem,
-        lower_bounds_ptr,
-    )
+    ccall((:cuOptGetConstraintLowerBounds, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_float_t}), problem, lower_bounds_ptr)
 end
 
 """
@@ -510,13 +342,7 @@ Get the upper bounds of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetConstraintUpperBounds(problem, upper_bounds_ptr)
-    return ccall(
-        (:cuOptGetConstraintUpperBounds, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_float_t}),
-        problem,
-        upper_bounds_ptr,
-    )
+    ccall((:cuOptGetConstraintUpperBounds, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_float_t}), problem, upper_bounds_ptr)
 end
 
 """
@@ -531,13 +357,7 @@ Get the lower bounds of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetVariableLowerBounds(problem, lower_bounds_ptr)
-    return ccall(
-        (:cuOptGetVariableLowerBounds, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_float_t}),
-        problem,
-        lower_bounds_ptr,
-    )
+    ccall((:cuOptGetVariableLowerBounds, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_float_t}), problem, lower_bounds_ptr)
 end
 
 """
@@ -552,13 +372,7 @@ Get the upper bounds of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetVariableUpperBounds(problem, upper_bounds_ptr)
-    return ccall(
-        (:cuOptGetVariableUpperBounds, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_float_t}),
-        problem,
-        upper_bounds_ptr,
-    )
+    ccall((:cuOptGetVariableUpperBounds, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_float_t}), problem, upper_bounds_ptr)
 end
 
 """
@@ -573,13 +387,7 @@ Get the variable types of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetVariableTypes(problem, variable_types_ptr)
-    return ccall(
-        (:cuOptGetVariableTypes, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{Cchar}),
-        problem,
-        variable_types_ptr,
-    )
+    ccall((:cuOptGetVariableTypes, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{Cchar}), problem, variable_types_ptr)
 end
 
 """
@@ -593,12 +401,7 @@ Create a solver settings object.
 A status code indicating success or failure.
 """
 function cuOptCreateSolverSettings(settings_ptr)
-    return ccall(
-        (:cuOptCreateSolverSettings, libcuopt),
-        cuopt_int_t,
-        (Ptr{cuOptSolverSettings},),
-        settings_ptr,
-    )
+    ccall((:cuOptCreateSolverSettings, libcuopt), cuopt_int_t, (Ptr{cuOptSolverSettings},), settings_ptr)
 end
 
 """
@@ -610,12 +413,7 @@ Destroy a solver settings object.
 * `settings_ptr`:\\[in,out\\] - A pointer to a [`cuOptSolverSettings`](@ref) object. On output the solver settings will be destroyed and the pointer will be set to NULL.
 """
 function cuOptDestroySolverSettings(settings_ptr)
-    return ccall(
-        (:cuOptDestroySolverSettings, libcuopt),
-        Cvoid,
-        (Ptr{cuOptSolverSettings},),
-        settings_ptr,
-    )
+    ccall((:cuOptDestroySolverSettings, libcuopt), Cvoid, (Ptr{cuOptSolverSettings},), settings_ptr)
 end
 
 """
@@ -629,14 +427,7 @@ Set a parameter of a solver settings object.
 * `parameter_value`:\\[in\\] - The value of the parameter to set.
 """
 function cuOptSetParameter(settings, parameter_name, parameter_value)
-    return ccall(
-        (:cuOptSetParameter, libcuopt),
-        cuopt_int_t,
-        (cuOptSolverSettings, Ptr{Cchar}, Ptr{Cchar}),
-        settings,
-        parameter_name,
-        parameter_value,
-    )
+    ccall((:cuOptSetParameter, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{Cchar}, Ptr{Cchar}), settings, parameter_name, parameter_value)
 end
 
 """
@@ -652,21 +443,8 @@ Get a parameter of a solver settings object.
 # Returns
 A status code indicating success or failure.
 """
-function cuOptGetParameter(
-    settings,
-    parameter_name,
-    parameter_value_size,
-    parameter_value,
-)
-    return ccall(
-        (:cuOptGetParameter, libcuopt),
-        cuopt_int_t,
-        (cuOptSolverSettings, Ptr{Cchar}, cuopt_int_t, Ptr{Cchar}),
-        settings,
-        parameter_name,
-        parameter_value_size,
-        parameter_value,
-    )
+function cuOptGetParameter(settings, parameter_name, parameter_value_size, parameter_value)
+    ccall((:cuOptGetParameter, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{Cchar}, cuopt_int_t, Ptr{Cchar}), settings, parameter_name, parameter_value_size, parameter_value)
 end
 
 """
@@ -682,14 +460,7 @@ Set an integer parameter of a solver settings object.
 A status code indicating success or failure.
 """
 function cuOptSetIntegerParameter(settings, parameter_name, parameter_value)
-    return ccall(
-        (:cuOptSetIntegerParameter, libcuopt),
-        cuopt_int_t,
-        (cuOptSolverSettings, Ptr{Cchar}, cuopt_int_t),
-        settings,
-        parameter_name,
-        parameter_value,
-    )
+    ccall((:cuOptSetIntegerParameter, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{Cchar}, cuopt_int_t), settings, parameter_name, parameter_value)
 end
 
 """
@@ -705,14 +476,7 @@ Get an integer parameter of a solver settings object.
 A status code indicating success or failure.
 """
 function cuOptGetIntegerParameter(settings, parameter_name, parameter_value)
-    return ccall(
-        (:cuOptGetIntegerParameter, libcuopt),
-        cuopt_int_t,
-        (cuOptSolverSettings, Ptr{Cchar}, Ptr{cuopt_int_t}),
-        settings,
-        parameter_name,
-        parameter_value,
-    )
+    ccall((:cuOptGetIntegerParameter, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{Cchar}, Ptr{cuopt_int_t}), settings, parameter_name, parameter_value)
 end
 
 """
@@ -728,14 +492,7 @@ Set a float parameter of a solver settings object.
 A status code indicating success or failure.
 """
 function cuOptSetFloatParameter(settings, parameter_name, parameter_value)
-    return ccall(
-        (:cuOptSetFloatParameter, libcuopt),
-        cuopt_int_t,
-        (cuOptSolverSettings, Ptr{Cchar}, cuopt_float_t),
-        settings,
-        parameter_name,
-        parameter_value,
-    )
+    ccall((:cuOptSetFloatParameter, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{Cchar}, cuopt_float_t), settings, parameter_name, parameter_value)
 end
 
 """
@@ -751,14 +508,7 @@ Get a float parameter of a solver settings object.
 A status code indicating success or failure.
 """
 function cuOptGetFloatParameter(settings, parameter_name, parameter_value)
-    return ccall(
-        (:cuOptGetFloatParameter, libcuopt),
-        cuopt_int_t,
-        (cuOptSolverSettings, Ptr{Cchar}, Ptr{cuopt_float_t}),
-        settings,
-        parameter_name,
-        parameter_value,
-    )
+    ccall((:cuOptGetFloatParameter, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{Cchar}, Ptr{cuopt_float_t}), settings, parameter_name, parameter_value)
 end
 
 """
@@ -773,13 +523,7 @@ Check if an optimization problem is a mixed integer programming problem.
 A status code indicating success or failure.
 """
 function cuOptIsMIP(problem, is_mip_ptr)
-    return ccall(
-        (:cuOptIsMIP, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, Ptr{cuopt_int_t}),
-        problem,
-        is_mip_ptr,
-    )
+    ccall((:cuOptIsMIP, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}), problem, is_mip_ptr)
 end
 
 """
@@ -795,14 +539,7 @@ Solve an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptSolve(problem, settings, solution_ptr)
-    return ccall(
-        (:cuOptSolve, libcuopt),
-        cuopt_int_t,
-        (cuOptOptimizationProblem, cuOptSolverSettings, Ptr{cuOptSolution}),
-        problem,
-        settings,
-        solution_ptr,
-    )
+    ccall((:cuOptSolve, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, cuOptSolverSettings, Ptr{cuOptSolution}), problem, settings, solution_ptr)
 end
 
 """
@@ -814,12 +551,7 @@ Destroy a solution object.
 * `solution_ptr`:\\[in,out\\] - A pointer to a [`cuOptSolution`](@ref) object. On output the solution will be destroyed and the pointer will be set to NULL.
 """
 function cuOptDestroySolution(solution_ptr)
-    return ccall(
-        (:cuOptDestroySolution, libcuopt),
-        Cvoid,
-        (Ptr{cuOptSolution},),
-        solution_ptr,
-    )
+    ccall((:cuOptDestroySolution, libcuopt), Cvoid, (Ptr{cuOptSolution},), solution_ptr)
 end
 
 """
@@ -834,44 +566,19 @@ Get the termination reason of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetTerminationStatus(solution, termination_status_ptr)
-    return ccall(
-        (:cuOptGetTerminationStatus, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_int_t}),
-        solution,
-        termination_status_ptr,
-    )
+    ccall((:cuOptGetTerminationStatus, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_int_t}), solution, termination_status_ptr)
 end
 
 function cuOptGetErrorStatus(solution, error_status_ptr)
-    return ccall(
-        (:cuOptGetErrorStatus, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_int_t}),
-        solution,
-        error_status_ptr,
-    )
+    ccall((:cuOptGetErrorStatus, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_int_t}), solution, error_status_ptr)
 end
 
 function cuOptGetErrorString(solution, error_string_ptr, error_string_size)
-    return ccall(
-        (:cuOptGetErrorString, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{Cchar}, cuopt_int_t),
-        solution,
-        error_string_ptr,
-        error_string_size,
-    )
+    ccall((:cuOptGetErrorString, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{Cchar}, cuopt_int_t), solution, error_string_ptr, error_string_size)
 end
 
 function cuOptGetPrimalSolution(solution, solution_values)
-    return ccall(
-        (:cuOptGetPrimalSolution, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_float_t}),
-        solution,
-        solution_values,
-    )
+    ccall((:cuOptGetPrimalSolution, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, solution_values)
 end
 
 """
@@ -886,13 +593,7 @@ Get the objective value of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetObjectiveValue(solution, objective_value_ptr)
-    return ccall(
-        (:cuOptGetObjectiveValue, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_float_t}),
-        solution,
-        objective_value_ptr,
-    )
+    ccall((:cuOptGetObjectiveValue, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, objective_value_ptr)
 end
 
 """
@@ -907,13 +608,7 @@ Get the solve time of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetSolveTime(solution, solve_time_ptr)
-    return ccall(
-        (:cuOptGetSolveTime, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_float_t}),
-        solution,
-        solve_time_ptr,
-    )
+    ccall((:cuOptGetSolveTime, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, solve_time_ptr)
 end
 
 """
@@ -928,13 +623,7 @@ Get the relative MIP gap of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetMIPGap(solution, mip_gap_ptr)
-    return ccall(
-        (:cuOptGetMIPGap, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_float_t}),
-        solution,
-        mip_gap_ptr,
-    )
+    ccall((:cuOptGetMIPGap, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, mip_gap_ptr)
 end
 
 """
@@ -949,13 +638,7 @@ Get the solution bound of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetSolutionBound(solution, solution_bound_ptr)
-    return ccall(
-        (:cuOptGetSolutionBound, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_float_t}),
-        solution,
-        solution_bound_ptr,
-    )
+    ccall((:cuOptGetSolutionBound, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, solution_bound_ptr)
 end
 
 """
@@ -970,13 +653,7 @@ Get the dual solution of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetDualSolution(solution, dual_solution_ptr)
-    return ccall(
-        (:cuOptGetDualSolution, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_float_t}),
-        solution,
-        dual_solution_ptr,
-    )
+    ccall((:cuOptGetDualSolution, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, dual_solution_ptr)
 end
 
 """
@@ -991,13 +668,7 @@ Get the dual objective value of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetDualObjectiveValue(solution, dual_objective_value_ptr)
-    return ccall(
-        (:cuOptGetDualObjectiveValue, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_float_t}),
-        solution,
-        dual_objective_value_ptr,
-    )
+    ccall((:cuOptGetDualObjectiveValue, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, dual_objective_value_ptr)
 end
 
 """
@@ -1012,13 +683,7 @@ Get the reduced costs of an optimization problem.
 A status code indicating success or failure.
 """
 function cuOptGetReducedCosts(solution, reduced_cost_ptr)
-    return ccall(
-        (:cuOptGetReducedCosts, libcuopt),
-        cuopt_int_t,
-        (cuOptSolution, Ptr{cuopt_float_t}),
-        solution,
-        reduced_cost_ptr,
-    )
+    ccall((:cuOptGetReducedCosts, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, reduced_cost_ptr)
 end
 
 const CUOPT_INSTANTIATE_FLOAT = 0
@@ -1176,3 +841,4 @@ const CUOPT_VALIDATION_ERROR = 4
 const CUOPT_OUT_OF_MEMORY = 5
 
 const CUOPT_RUNTIME_ERROR = 6
+
