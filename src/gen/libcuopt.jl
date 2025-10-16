@@ -734,6 +734,24 @@ const CUOPT_LOG_TO_CONSOLE = "log_to_console"
 
 const CUOPT_CROSSOVER = "crossover"
 
+const CUOPT_FOLDING = "folding"
+
+const CUOPT_AUGMENTED = "augmented"
+
+const CUOPT_DUALIZE = "dualize"
+
+const CUOPT_ORDERING = "ordering"
+
+const CUOPT_BARRIER_DUAL_INITIAL_POINT = "barrier_dual_initial_point"
+
+const CUOPT_ELIMINATE_DENSE_COLUMNS = "eliminate_dense_columns"
+
+const CUOPT_CUDSS_DETERMINISTIC = "cudss_deterministic"
+
+const CUOPT_PRESOLVE = "presolve"
+
+const CUOPT_DUAL_POSTSOLVE = "dual_postsolve"
+
 const CUOPT_MIP_ABSOLUTE_TOLERANCE = "mip_absolute_tolerance"
 
 const CUOPT_MIP_RELATIVE_TOLERANCE = "mip_relative_tolerance"
@@ -747,6 +765,8 @@ const CUOPT_MIP_RELATIVE_GAP = "mip_relative_gap"
 const CUOPT_MIP_HEURISTICS_ONLY = "mip_heuristics_only"
 
 const CUOPT_MIP_SCALING = "mip_scaling"
+
+const CUOPT_MIP_PRESOLVE = "mip_presolve"
 
 const CUOPT_SOLUTION_FILE = "solution_file"
 
@@ -798,11 +818,15 @@ const CUOPT_PDLP_SOLVER_MODE_METHODICAL1 = 2
 
 const CUOPT_PDLP_SOLVER_MODE_FAST1 = 3
 
+const CUOPT_PDLP_SOLVER_MODE_STABLE3 = 4
+
 const CUOPT_METHOD_CONCURRENT = 0
 
 const CUOPT_METHOD_PDLP = 1
 
 const CUOPT_METHOD_DUAL_SIMPLEX = 2
+
+const CUOPT_METHOD_BARRIER = 3
 
 const CUOPT_SUCCESS = 0
 
