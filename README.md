@@ -32,7 +32,7 @@ To use cuOpt.jl, you must first separately install cuOpt.
 
 **Installing cuOpt requires Linux.**
 
-Note: This version of cuOpt.jl supports Nvidia cuOpt 25.10.* releases.
+Note: This version of cuOpt.jl supports the Nvidia cuOpt 25.08 and 25.10 releases.
 
 Please refer to the [NVIDIA cuOpt documentation](https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-c/quick-start.html#installation) for installation instructions.
 
