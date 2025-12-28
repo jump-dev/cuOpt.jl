@@ -106,6 +106,146 @@ function test_Direct_C_call()
     return cuOpt.cuOptDestroyProblem(problem_ref)
 end
 
+function test_QuadraticProblem_C_call()
+    n_col = Cint(2)
+    n_row = Cint(1)
+
+    colcost = Cdouble[0.0, 0.0]
+    collower = Cdouble[0.0, 0.0]
+    colupper = Cdouble[10.0, 10.0]
+
+    q_row_offsets = Cint[0, 1, 2]
+    q_col_indices = Cint[0, 1]
+    q_values = Cdouble[1.0, 1.0]
+
+    a_row_offsets = Cint[0, 2]
+    a_col_indices = Cint[0, 1]
+    a_values = Cdouble[1.0, 1.0]
+
+    constraint_sense = Cchar[cuOpt.CUOPT_GREATER_THAN]
+    rhs = Cdouble[1.0]
+
+    objective_sense = Int32(cuOpt.CUOPT_MINIMIZE)
+    problem_ref = Ref{cuOpt.cuOptOptimizationProblem}()
+
+    ret = cuOpt.cuOptCreateQuadraticProblem(
+        n_row,
+        n_col,
+        objective_sense,
+        0.0,
+        colcost,
+        q_row_offsets,
+        q_col_indices,
+        q_values,
+        a_row_offsets,
+        a_col_indices,
+        a_values,
+        constraint_sense,
+        rhs,
+        collower,
+        colupper,
+        problem_ref,
+    )
+    @test ret == 0
+    problem = problem_ref[]
+
+    settings_ref = Ref{cuOpt.cuOptSolverSettings}()
+    ret = cuOpt.cuOptCreateSolverSettings(settings_ref)
+    @test ret == 0
+    settings = settings_ref[]
+
+    solution_ref = Ref{cuOpt.cuOptSolution}()
+    ret = cuOpt.cuOptSolve(problem, settings, solution_ref)
+    @test ret == 0
+    solution = solution_ref[]
+
+    termination_status = Ref{Cint}(0)
+    ret = cuOpt.cuOptGetTerminationStatus(solution, termination_status)
+    @test ret == 0
+    @test termination_status[] == cuOpt.CUOPT_TERIMINATION_STATUS_OPTIMAL
+
+    obj_value = Ref{Cdouble}(0.0)
+    ret = cuOpt.cuOptGetObjectiveValue(solution, obj_value)
+    @test ret == 0
+    @test abs(obj_value[] - 0.5) < 0.01
+
+    cuOpt.cuOptDestroySolution(solution_ref)
+    cuOpt.cuOptDestroySolverSettings(settings_ref)
+    return cuOpt.cuOptDestroyProblem(problem_ref)
+end
+
+function test_QuadraticRangedProblem_C_call()
+    n_col = Cint(2)
+    n_row = Cint(1)
+
+    colcost = Cdouble[0.0, 0.0]
+    collower = Cdouble[0.0, 0.0]
+    colupper = Cdouble[10.0, 10.0]
+
+    q_row_offsets = Cint[0, 1, 2]
+    q_col_indices = Cint[0, 1]
+    q_values = Cdouble[1.0, 1.0]
+
+    a_row_offsets = Cint[0, 2]
+    a_col_indices = Cint[0, 1]
+    a_values = Cdouble[1.0, 1.0]
+
+    constraint_lower = Cdouble[1.0]
+    constraint_upper = Cdouble[10.0]
+
+    objective_sense = Int32(cuOpt.CUOPT_MINIMIZE)
+    problem_ref = Ref{cuOpt.cuOptOptimizationProblem}()
+
+    ret = cuOpt.cuOptCreateQuadraticRangedProblem(
+        n_row,
+        n_col,
+        objective_sense,
+        0.0,
+        colcost,
+        q_row_offsets,
+        q_col_indices,
+        q_values,
+        a_row_offsets,
+        a_col_indices,
+        a_values,
+        constraint_lower,
+        constraint_upper,
+        collower,
+        colupper,
+        problem_ref,
+    )
+    @test ret == 0
+    problem = problem_ref[]
+
+    settings_ref = Ref{cuOpt.cuOptSolverSettings}()
+    ret = cuOpt.cuOptCreateSolverSettings(settings_ref)
+    @test ret == 0
+    settings = settings_ref[]
+
+    solution_ref = Ref{cuOpt.cuOptSolution}()
+    ret = cuOpt.cuOptSolve(problem, settings, solution_ref)
+    @test ret == 0
+    solution = solution_ref[]
+
+    termination_status = Ref{Cint}(0)
+    ret = cuOpt.cuOptGetTerminationStatus(solution, termination_status)
+    @test ret == 0
+    @test termination_status[] == cuOpt.CUOPT_TERIMINATION_STATUS_OPTIMAL
+
+    obj_value = Ref{Cdouble}(0.0)
+    ret = cuOpt.cuOptGetObjectiveValue(solution, obj_value)
+    @test ret == 0
+    @test abs(obj_value[] - 0.5) < 0.01
+
+    cuOpt.cuOptDestroySolution(solution_ref)
+    cuOpt.cuOptDestroySolverSettings(settings_ref)
+    return cuOpt.cuOptDestroyProblem(problem_ref)
+end
+
+function test_CUOPT_NUM_GPUS_constant()
+    @test cuOpt.CUOPT_NUM_GPUS == "num_gpus"
+end
+
 function runtests()
     for name in names(@__MODULE__; all = true)
         if startswith(string(name), "test_")
