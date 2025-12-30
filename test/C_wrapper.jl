@@ -103,7 +103,8 @@ function test_Direct_C_call()
 
     cuOpt.cuOptDestroySolution(solution_ref)
     cuOpt.cuOptDestroySolverSettings(settings_ref)
-    return cuOpt.cuOptDestroyProblem(problem_ref)
+    cuOpt.cuOptDestroyProblem(problem_ref)
+    return
 end
 
 function test_QuadraticProblem_C_call()
@@ -171,7 +172,8 @@ function test_QuadraticProblem_C_call()
 
     cuOpt.cuOptDestroySolution(solution_ref)
     cuOpt.cuOptDestroySolverSettings(settings_ref)
-    return cuOpt.cuOptDestroyProblem(problem_ref)
+    cuOpt.cuOptDestroyProblem(problem_ref)
+    return
 end
 
 function test_QuadraticRangedProblem_C_call()
@@ -239,11 +241,13 @@ function test_QuadraticRangedProblem_C_call()
 
     cuOpt.cuOptDestroySolution(solution_ref)
     cuOpt.cuOptDestroySolverSettings(settings_ref)
-    return cuOpt.cuOptDestroyProblem(problem_ref)
+    cuOpt.cuOptDestroyProblem(problem_ref)
+    return
 end
 
 function test_CUOPT_NUM_GPUS_constant()
     @test cuOpt.CUOPT_NUM_GPUS == "num_gpus"
+    return
 end
 
 function runtests()
@@ -254,8 +258,9 @@ function runtests()
             end
         end
     end
+    return
 end
 
-end
+end  # TestCCuOpt
 
 TestCCuOpt.runtests()
