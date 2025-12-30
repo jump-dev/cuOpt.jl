@@ -17,7 +17,7 @@
 name = "cuOpt"
 uuid = "29a73d17-8276-40b7-9ffb-d89e58023643"
 authors = ["Rajesh Gandham <rgandham@nvidia.com>", "Ramakrishna Prabhu <ramakrishnap@nvidia.com>"]
-version = "0.2.0"
+version = "0.1.2"
 
 [deps]
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
