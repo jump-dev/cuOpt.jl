@@ -929,14 +929,14 @@ function _get_objective_data(
 end
 
 function _get_objective_data(
-    f::MOI.ScalarAffineFunction,
+    f_obj::MOI.ScalarAffineFunction,
     mapping,
     numcol::Int32,
 )
-    objective_offset = f.constant
+    objective_offset = f_obj.constant
 
     objective_coefficients_linear = zeros(Float64, numcol)
-    for term in f.terms
+    for term in f_obj.terms
         i = mapping[term.variable].value
         objective_coefficients_linear[i] += term.coefficient
     end
@@ -949,14 +949,14 @@ function _get_objective_data(
 end
 
 function _get_objective_data(
-    f::MOI.ScalarQuadraticFunction,
+    f_obj::MOI.ScalarQuadraticFunction,
     mapping,
     numcol::Int32,
 )
-    objective_offset = f.constant
+    objective_offset = f_obj.constant
 
     objective_coefficients_linear = zeros(Float64, numcol)
-    for term in f.affine_terms
+    for term in f_obj.affine_terms
         i = mapping[term.variable].value
         objective_coefficients_linear[i] += term.coefficient
     end
