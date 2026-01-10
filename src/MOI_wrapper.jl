@@ -914,12 +914,25 @@ function _get_objective_data(
     F = MOI.get(src, MOI.ObjectiveFunctionType())
     f_obj = MOI.get(src, MOI.ObjectiveFunction{F}())
 
-    objective_offset, objective_coefficients_linear, qobj_row_offsets, qobj_col_indices, qobj_matrix_values = _get_objective_data(f_obj, mapping, numcol)
+    objective_offset,
+    objective_coefficients_linear,
+    qobj_row_offsets,
+    qobj_col_indices,
+    qobj_matrix_values = _get_objective_data(f_obj, mapping, numcol)
 
-    return objective_sense, objective_offset, objective_coefficients_linear, qobj_row_offsets, qobj_col_indices, qobj_matrix_values
+    return objective_sense,
+    objective_offset,
+    objective_coefficients_linear,
+    qobj_row_offsets,
+    qobj_col_indices,
+    qobj_matrix_values
 end
 
-function _get_objective_data(f::MOI.ScalarAffineFunction, mapping, numcol::Int32)
+function _get_objective_data(
+    f::MOI.ScalarAffineFunction,
+    mapping,
+    numcol::Int32,
+)
     objective_offset = f.constant
 
     objective_coefficients_linear = zeros(Float64, numcol)
@@ -928,10 +941,18 @@ function _get_objective_data(f::MOI.ScalarAffineFunction, mapping, numcol::Int32
         objective_coefficients_linear[i] += term.coefficient
     end
 
-    return objective_offset, objective_coefficients_linear, Int32[0], Int32[], Float64[]
+    return objective_offset,
+    objective_coefficients_linear,
+    Int32[0],
+    Int32[],
+    Float64[]
 end
 
-function _get_objective_data(f::MOI.ScalarQuadraticFunction, mapping, numcol::Int32)
+function _get_objective_data(
+    f::MOI.ScalarQuadraticFunction,
+    mapping,
+    numcol::Int32,
+)
     objective_offset = f.constant
 
     objective_coefficients_linear = zeros(Float64, numcol)
@@ -955,7 +976,7 @@ function _get_objective_data(f::MOI.ScalarQuadraticFunction, mapping, numcol::In
             # Adjust diagonal coefficients to match cuOpt convention
             v /= 2
         end
-        
+
         # We are building a COO of Qᵀ --> swap i and j
         push!(Qtrows, j)
         push!(Qtcols, i)
@@ -968,7 +989,11 @@ function _get_objective_data(f::MOI.ScalarQuadraticFunction, mapping, numcol::In
     qobj_row_offsets = Qt.colptr .- Int32(1)
     qobj_col_indices = Qt.rowval .- Int32(1)
 
-    return objective_offset, objective_coefficients_linear, qobj_row_offsets, qobj_col_indices, qobj_matrix_values
+    return objective_offset,
+    objective_coefficients_linear,
+    qobj_row_offsets,
+    qobj_col_indices,
+    qobj_matrix_values
 end
 
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
@@ -1025,13 +1050,19 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
         has_integrality = true
     end
 
-    objective_sense, objective_offset, objective_coefficients, qobj_row_offsets, qobj_col_indices, qobj_matrix_values =
-        _get_objective_data(dest, src, mapping, numcol)
+    objective_sense,
+    objective_offset,
+    objective_coefficients,
+    qobj_row_offsets,
+    qobj_col_indices,
+    qobj_matrix_values = _get_objective_data(dest, src, mapping, numcol)
 
     # Is this a QP or an LP?
     has_quadratic_objective = length(qobj_matrix_values) > 0
     if has_quadratic_objective && has_integrality
-        error("cuOpt does not support models with quadratic objectives _and_ integer variables")
+        error(
+            "cuOpt does not support models with quadratic objectives _and_ integer variables",
+        )
     end
 
     if has_quadratic_objective
