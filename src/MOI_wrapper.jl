@@ -982,12 +982,14 @@ function _get_objective_data(
         push!(Qtcols, i)
         push!(Qtvals, v)
     end
-    # Retrieve CSR representation of Q, and revert to 0-based indexing
+    # CSC of Qᵀ is CSR of Q
     Qt = sparse(Qtrows, Qtcols, Qtvals, numcol, numcol)
     qobj_matrix_values = Qt.nzval
-    # ⚠️ ensure row & column indices are Int32-valued
-    qobj_row_offsets = Qt.colptr .- Int32(1)
-    qobj_col_indices = Qt.rowval .- Int32(1)
+    qobj_row_offsets = Qt.colptr
+    qobj_col_indices = Qt.rowval
+    # Revert to 0-based indexing
+    qobj_row_offsets .-= Int32(1)
+    qobj_col_indices .-= Int32(1)
 
     return objective_offset,
     objective_coefficients_linear,
@@ -1066,7 +1068,6 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
     end
 
     if has_quadratic_objective
-        # We have a QP
         ref_problem = Ref{cuOptOptimizationProblem}()
         ret = cuOptCreateQuadraticRangedProblem(
             numrow,
@@ -1088,7 +1089,6 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
         )
         _check_ret(ret, "cuOptCreateQuadraticRangedProblem")
     else
-        # we have an LP
         ref_problem = Ref{cuOptOptimizationProblem}()
         ret = cuOptCreateRangedProblem(
             numrow,
