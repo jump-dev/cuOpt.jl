@@ -18,7 +18,7 @@
 # The HiGHS wrapper is released under an MIT license, a copy of which can be
 # found in `/thirdparty/THIRD_PARTY_LICENSES` or at https://opensource.org/licenses/MIT.
 
-using SparseArrays: sparse
+import SparseArrays
 
 import MathOptInterface as MOI
 const CleverDicts = MOI.Utilities.CleverDicts
@@ -983,7 +983,7 @@ function _get_objective_data(
         push!(Qtvals, v)
     end
     # CSC of Qᵀ is CSR of Q
-    Qt = sparse(Qtrows, Qtcols, Qtvals, numcol, numcol)
+    Qt = SparseArrays.sparse(Qtrows, Qtcols, Qtvals, numcol, numcol)
     qobj_matrix_values = Qt.nzval
     qobj_row_offsets = Qt.colptr
     qobj_col_indices = Qt.rowval
