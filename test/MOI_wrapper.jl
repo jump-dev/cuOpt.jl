@@ -60,6 +60,10 @@ function test_runtests_cache_optimizer()
             "test_constraint_ZeroOne_bounds_3",
             # Upstream bug: https://github.com/NVIDIA/cuopt/issues/112
             "test_solve_TerminationStatus_DUAL_INFEASIBLE",
+            # Upstream bug: https://github.com/NVIDIA/cuopt/issues/759
+            # (cuOpt crashes when given a QP with no linear constraints)
+            "test_objective_qp_ObjectiveFunction_zero_ofdiag",
+            "test_objective_qp_ObjectiveFunction_edge_cases",
         ],
     )
     return
