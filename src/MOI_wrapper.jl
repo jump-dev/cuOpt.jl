@@ -972,8 +972,12 @@ function _get_objective_data(
         i = mapping[qterm.variable_1].value
         j = mapping[qterm.variable_2].value
         v = qterm.coefficient
+        # MOI stores quadratic functions as `¹/₂ xᵀQx + aᵀx + b`, with `Q` symmetric...
+        # (https://jump.dev/MathOptInterface.jl/stable/reference/standard_form/#MathOptInterface.ScalarQuadraticFunction)
+        # ... whereas cuOpt expects a QP objective of the form `¹xᵀQx + aᵀx + b`,
+        #     where `Q` need not be symmetric
+        # --> we need to scale diagonal coeffs. by ¹/₂ to match cuOpt convention
         if i == j
-            # Adjust diagonal coefficients to match cuOpt convention
             v /= 2
         end
 
