@@ -60,6 +60,10 @@ function test_runtests_cache_optimizer()
             "test_constraint_ZeroOne_bounds_3",
             # Upstream bug: https://github.com/NVIDIA/cuopt/issues/112
             "test_solve_TerminationStatus_DUAL_INFEASIBLE",
+            # Upstream bug: https://github.com/NVIDIA/cuopt/issues/759
+            # (cuOpt crashes when given a QP with no linear constraints)
+            "test_objective_qp_ObjectiveFunction_zero_ofdiag",
+            "test_objective_qp_ObjectiveFunction_edge_cases",
         ],
     )
     return
@@ -76,6 +80,134 @@ function test_air05()
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
     @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 26374.0; rtol = 1e-4)
     return
+end
+
+function test_qp_objective()
+    model = MOI.instantiate(cuOpt.Optimizer; with_cache_type = Float64)
+    MOI.set(model, MOI.Silent(), true)
+    x, _ = MOI.add_constrained_variable(
+        model,
+        (MOI.GreaterThan(0.0), MOI.LessThan(1.0)),
+    )
+    y, _ = MOI.add_constrained_variable(
+        model,
+        (MOI.GreaterThan(0.0), MOI.LessThan(1.0)),
+    )
+
+    # x + y == 1
+    MOI.add_constraint(
+        model,
+        MOI.ScalarAffineFunction(
+            [MOI.ScalarAffineTerm(1.0, x), MOI.ScalarAffineTerm(1.0, y)],
+            0.0,
+        ),
+        MOI.EqualTo(1.0),
+    )
+
+    F = MOI.ScalarQuadraticFunction{Float64}
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+
+    # 1. Homogeneous QP with diagonal objective
+    # Min ¹/₂ * (x² + y²) s.t. x+y == 1
+    fobj = MOI.ScalarQuadraticFunction(
+        [
+            MOI.ScalarQuadraticTerm(1.0, x, x),
+            MOI.ScalarQuadraticTerm(1.0, y, y),
+        ],
+        MOI.ScalarAffineTerm{Float64}[],
+        0.0,
+    )
+    MOI.set(model, MOI.ObjectiveFunction{F}(), fobj)
+    MOI.optimize!(model)
+
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), x),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), y),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    # ¹/₂ * (2 * 0.5² + 2*0.5²) == 0.5
+    @test isapprox(
+        MOI.get(model, MOI.ObjectiveValue()),
+        0.25;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+
+    # Change diagonal coefficients
+    # Min ¹/₂ * (2x² + 2y²) s.t. x+y == 1
+    fobj = MOI.ScalarQuadraticFunction(
+        [
+            MOI.ScalarQuadraticTerm(2.0, x, x),
+            MOI.ScalarQuadraticTerm(2.0, y, y),
+        ],
+        MOI.ScalarAffineTerm{Float64}[],
+        0.0,
+    )
+    MOI.set(model, MOI.ObjectiveFunction{F}(), fobj)
+    MOI.optimize!(model)
+    # Same solution, but different objective value
+    # ¹/₂ * (2 * 0.5² + 2*0.5²) == 0.5
+    @test isapprox(
+        MOI.get(model, MOI.ObjectiveValue()),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), x),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), y),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+
+    # QP with off-diagonal term
+    # (x - y - 2)² = x² - 2xy + y² - 4x + 4y + 4
+    #                   = ¹/₂ (2x² - xy - yx + 2y²) + (-4x + 4y) + 4
+    # Solution is (x, y) = (1, 0)
+    fobj = MOI.ScalarQuadraticFunction(
+        [
+            MOI.ScalarQuadraticTerm(2.0, x, x),
+            MOI.ScalarQuadraticTerm(2.0, y, y),
+            MOI.ScalarQuadraticTerm(-1.0, x, y),
+        ],
+        [MOI.ScalarAffineTerm(-4.0, x), MOI.ScalarAffineTerm(+4.0, y)],
+        4.0,
+    )
+    MOI.set(model, MOI.ObjectiveFunction{F}(), fobj)
+    MOI.optimize!(model)
+    @test isapprox(
+        MOI.get(model, MOI.ObjectiveValue()),
+        1;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), x),
+        1.0;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), y),
+        0.0;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+
+    return nothing
 end
 
 end  # TestMOIWrapper

@@ -18,6 +18,8 @@
 # The HiGHS wrapper is released under an MIT license, a copy of which can be
 # found in `/thirdparty/THIRD_PARTY_LICENSES` or at https://opensource.org/licenses/MIT.
 
+import SparseArrays
+
 import MathOptInterface as MOI
 const CleverDicts = MOI.Utilities.CleverDicts
 
@@ -621,8 +623,13 @@ end
 
 function MOI.supports(
     ::Optimizer,
-    ::Union{MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}},
-)
+    ::MOI.ObjectiveFunction{F},
+) where {
+    F<:Union{
+        MOI.ScalarAffineFunction{Float64},
+        MOI.ScalarQuadraticFunction{Float64},
+    },
+}
     return true
 end
 
@@ -651,6 +658,7 @@ function _check_input_data(dest::Optimizer, src::MOI.ModelLike)
         if attr in (
             MOI.Name(),
             MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(),
+            MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}(),
             MOI.ObjectiveSense(),
         )
             continue
@@ -903,17 +911,95 @@ function _get_objective_data(
 
     objective_sense = sense == MOI.MIN_SENSE ? CUOPT_MINIMIZE : CUOPT_MAXIMIZE
 
-    objective_coefficients = zeros(Float64, numcol)
     F = MOI.get(src, MOI.ObjectiveFunctionType())
     f_obj = MOI.get(src, MOI.ObjectiveFunction{F}())
 
-    for term in f_obj.terms
-        objective_coefficients[mapping[term.variable].value] += term.coefficient
-    end
+    objective_offset,
+    objective_coefficients_linear,
+    qobj_row_offsets,
+    qobj_col_indices,
+    qobj_matrix_values = _get_objective_data(f_obj, mapping, numcol)
 
+    return objective_sense,
+    objective_offset,
+    objective_coefficients_linear,
+    qobj_row_offsets,
+    qobj_col_indices,
+    qobj_matrix_values
+end
+
+function _get_objective_data(
+    f_obj::MOI.ScalarAffineFunction,
+    mapping,
+    numcol::Int32,
+)
     objective_offset = f_obj.constant
 
-    return objective_sense, objective_offset, objective_coefficients
+    objective_coefficients_linear = zeros(Float64, numcol)
+    for term in f_obj.terms
+        i = mapping[term.variable].value
+        objective_coefficients_linear[i] += term.coefficient
+    end
+
+    return objective_offset,
+    objective_coefficients_linear,
+    Int32[0],
+    Int32[],
+    Float64[]
+end
+
+function _get_objective_data(
+    f_obj::MOI.ScalarQuadraticFunction,
+    mapping,
+    numcol::Int32,
+)
+    objective_offset = f_obj.constant
+
+    objective_coefficients_linear = zeros(Float64, numcol)
+    for term in f_obj.affine_terms
+        i = mapping[term.variable].value
+        objective_coefficients_linear[i] += term.coefficient
+    end
+
+    # Extract quadratic objective
+    Qtrows = Int32[]
+    Qtcols = Int32[]
+    Qtvals = Float64[]
+    sizehint!(Qtrows, length(f_obj.quadratic_terms))
+    sizehint!(Qtcols, length(f_obj.quadratic_terms))
+    sizehint!(Qtvals, length(f_obj.quadratic_terms))
+    for qterm in f_obj.quadratic_terms
+        i = mapping[qterm.variable_1].value
+        j = mapping[qterm.variable_2].value
+        v = qterm.coefficient
+        # MOI stores quadratic functions as `¹/₂ xᵀQx + aᵀx + b`, with `Q` symmetric...
+        # (https://jump.dev/MathOptInterface.jl/stable/reference/standard_form/#MathOptInterface.ScalarQuadraticFunction)
+        # ... whereas cuOpt expects a QP objective of the form `¹xᵀQx + aᵀx + b`,
+        #     where `Q` need not be symmetric
+        # --> we need to scale diagonal coeffs. by ¹/₂ to match cuOpt convention
+        if i == j
+            v /= 2
+        end
+
+        # We are building a COO of Qᵀ --> swap i and j
+        push!(Qtrows, j)
+        push!(Qtcols, i)
+        push!(Qtvals, v)
+    end
+    # CSC of Qᵀ is CSR of Q
+    Qt = SparseArrays.sparse(Qtrows, Qtcols, Qtvals, numcol, numcol)
+    qobj_matrix_values = Qt.nzval
+    qobj_row_offsets = Qt.colptr
+    qobj_col_indices = Qt.rowval
+    # Revert to 0-based indexing
+    qobj_row_offsets .-= Int32(1)
+    qobj_col_indices .-= Int32(1)
+
+    return objective_offset,
+    objective_coefficients_linear,
+    qobj_row_offsets,
+    qobj_col_indices,
+    qobj_matrix_values
 end
 
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
@@ -970,27 +1056,63 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
         has_integrality = true
     end
 
-    objective_sense, objective_offset, objective_coefficients =
-        _get_objective_data(dest, src, mapping, numcol)
+    objective_sense,
+    objective_offset,
+    objective_coefficients,
+    qobj_row_offsets,
+    qobj_col_indices,
+    qobj_matrix_values = _get_objective_data(dest, src, mapping, numcol)
 
-    ref_problem = Ref{cuOptOptimizationProblem}()
-    ret = cuOptCreateRangedProblem(
-        numrow,
-        numcol,
-        objective_sense,
-        objective_offset,
-        objective_coefficients,
-        constraint_matrix_row_offsets,
-        constraint_matrix_column_indices,
-        constraint_matrix_coefficients,
-        rowlower,
-        rowupper,
-        collower,
-        colupper,
-        var_type,
-        ref_problem,
-    )
-    _check_ret(ret, "cuOptCreateRangedProblem")
+    # Is this a QP or an LP?
+    has_quadratic_objective = length(qobj_matrix_values) > 0
+    if has_quadratic_objective && has_integrality
+        error(
+            "cuOpt does not support models with quadratic objectives _and_ integer variables",
+        )
+    end
+
+    if has_quadratic_objective
+        ref_problem = Ref{cuOptOptimizationProblem}()
+        ret = cuOptCreateQuadraticRangedProblem(
+            numrow,
+            numcol,
+            objective_sense,
+            objective_offset,
+            objective_coefficients,
+            qobj_row_offsets,
+            qobj_col_indices,
+            qobj_matrix_values,
+            constraint_matrix_row_offsets,
+            constraint_matrix_column_indices,
+            constraint_matrix_coefficients,
+            rowlower,
+            rowupper,
+            collower,
+            colupper,
+            ref_problem,
+        )
+        _check_ret(ret, "cuOptCreateQuadraticRangedProblem")
+    else
+        ref_problem = Ref{cuOptOptimizationProblem}()
+        ret = cuOptCreateRangedProblem(
+            numrow,
+            numcol,
+            objective_sense,
+            objective_offset,
+            objective_coefficients,
+            constraint_matrix_row_offsets,
+            constraint_matrix_column_indices,
+            constraint_matrix_coefficients,
+            rowlower,
+            rowupper,
+            collower,
+            colupper,
+            var_type,
+            ref_problem,
+        )
+        _check_ret(ret, "cuOptCreateRangedProblem")
+    end
+
     dest.cuopt_problem = ref_problem[]
 
     ref_settings = Ref{cuOptSolverSettings}()
