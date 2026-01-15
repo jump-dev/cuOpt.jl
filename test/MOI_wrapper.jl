@@ -31,7 +31,7 @@ function runtests()
     return
 end
 
-function _test_runtests()
+function test_runtests()
     model = cuOpt.Optimizer()
     MOI.Test.runtests(
         model,
@@ -41,7 +41,7 @@ function _test_runtests()
     return
 end
 
-function _test_runtests_cache_optimizer()
+function test_runtests_cache_optimizer()
     model = MOI.instantiate(cuOpt.Optimizer; with_cache_type = Float64)
     MOI.Test.runtests(
         model,
@@ -69,7 +69,7 @@ function _test_runtests_cache_optimizer()
     return
 end
 
-function _test_air05()
+function test_air05()
     src = MOI.FileFormats.MPS.Model()
     MOI.read_from_file(src, joinpath(@__DIR__, "datasets", "air05.mps"))
     model = cuOpt.Optimizer()
@@ -85,13 +85,23 @@ end
 function test_qp_objective()
     model = MOI.instantiate(cuOpt.Optimizer; with_cache_type = Float64)
     MOI.set(model, MOI.Silent(), true)
-    x, _ = MOI.add_constrained_variable(model, (MOI.GreaterThan(0.0), MOI.LessThan(1.0)))
-    y, _ = MOI.add_constrained_variable(model, (MOI.GreaterThan(0.0), MOI.LessThan(1.0)))
+    x, _ = MOI.add_constrained_variable(
+        model,
+        (MOI.GreaterThan(0.0), MOI.LessThan(1.0)),
+    )
+    y, _ = MOI.add_constrained_variable(
+        model,
+        (MOI.GreaterThan(0.0), MOI.LessThan(1.0)),
+    )
 
     # x + y == 1
-    MOI.add_constraint(model,
-        MOI.ScalarAffineFunction([MOI.ScalarAffineTerm(1.0, x), MOI.ScalarAffineTerm(1.0, y)], 0.0),
-        MOI.EqualTo(1.0)
+    MOI.add_constraint(
+        model,
+        MOI.ScalarAffineFunction(
+            [MOI.ScalarAffineTerm(1.0, x), MOI.ScalarAffineTerm(1.0, y)],
+            0.0,
+        ),
+        MOI.EqualTo(1.0),
     )
 
     F = MOI.ScalarQuadraticFunction{Float64}
@@ -110,10 +120,25 @@ function test_qp_objective()
     MOI.set(model, MOI.ObjectiveFunction{F}(), fobj)
     MOI.optimize!(model)
 
-    @test isapprox(MOI.get(model, MOI.VariablePrimal(), x), 0.5; atol=1e-4, rtol = 1e-4)
-    @test isapprox(MOI.get(model, MOI.VariablePrimal(), y), 0.5; atol=1e-4, rtol = 1e-4)
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), x),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), y),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
     # ¹/₂ * (2 * 0.5² + 2*0.5²) == 0.5
-    @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 0.25; atol=1e-4, rtol = 1e-4)
+    @test isapprox(
+        MOI.get(model, MOI.ObjectiveValue()),
+        0.25;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
 
     # Change diagonal coefficients
     # Min ¹/₂ * (2x² + 2y²) s.t. x+y == 1
@@ -129,9 +154,24 @@ function test_qp_objective()
     MOI.optimize!(model)
     # Same solution, but different objective value
     # ¹/₂ * (2 * 0.5² + 2*0.5²) == 0.5
-    @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 0.5; atol=1e-4, rtol = 1e-4)
-    @test isapprox(MOI.get(model, MOI.VariablePrimal(), x), 0.5; atol=1e-4, rtol = 1e-4)
-    @test isapprox(MOI.get(model, MOI.VariablePrimal(), y), 0.5; atol=1e-4, rtol = 1e-4)
+    @test isapprox(
+        MOI.get(model, MOI.ObjectiveValue()),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), x),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), y),
+        0.5;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
 
     # QP with off-diagonal term
     # (x - y - 2)² = x² - 2xy + y² - 4x + 4y + 4
@@ -143,17 +183,29 @@ function test_qp_objective()
             MOI.ScalarQuadraticTerm(2.0, y, y),
             MOI.ScalarQuadraticTerm(-1.0, x, y),
         ],
-        [
-            MOI.ScalarAffineTerm(-4.0, x),
-            MOI.ScalarAffineTerm(+4.0, y),
-        ],
+        [MOI.ScalarAffineTerm(-4.0, x), MOI.ScalarAffineTerm(+4.0, y)],
         4.0,
     )
     MOI.set(model, MOI.ObjectiveFunction{F}(), fobj)
     MOI.optimize!(model)
-    @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 1; atol=1e-4, rtol = 1e-4)
-    @test isapprox(MOI.get(model, MOI.VariablePrimal(), x), 1.0; atol=1e-4, rtol = 1e-4)
-    @test isapprox(MOI.get(model, MOI.VariablePrimal(), y), 0.0; atol=1e-4, rtol = 1e-4)
+    @test isapprox(
+        MOI.get(model, MOI.ObjectiveValue()),
+        1;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), x),
+        1.0;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
+    @test isapprox(
+        MOI.get(model, MOI.VariablePrimal(), y),
+        0.0;
+        atol = 1e-4,
+        rtol = 1e-4,
+    )
 
     return nothing
 end
