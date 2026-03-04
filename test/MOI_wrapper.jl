@@ -56,10 +56,10 @@ function test_runtests_cache_optimizer()
             ],
         );
         exclude = [
-            # Upstream bug: https://github.com/NVIDIA/cuopt/issues/260
-            "test_constraint_ZeroOne_bounds_3",
-            # Upstream bug: https://github.com/NVIDIA/cuopt/issues/112
+            # upstream bug https://github.com/NVIDIA/cuopt/issues/923
             "test_solve_TerminationStatus_DUAL_INFEASIBLE",
+            "test_linear_DUAL_INFEASIBLE",
+            "test_linear_DUAL_INFEASIBLE_2",
         ],
     )
     return
@@ -73,7 +73,9 @@ function test_air05()
     MOI.set(model, MOI.RawOptimizerAttribute(cuOpt.CUOPT_TIME_LIMIT), 60.0)
     MOI.copy_to(model, src)
     MOI.optimize!(model)
-    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    # upstream bug: https://github.com/NVIDIA/cuopt/issues/855, should be fixed in 26.04
+    # @test_broken to be fixed when upgrading to cuopt 26.04
+    @test_broken MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
     @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 26374.0; rtol = 1e-4)
     return
 end
