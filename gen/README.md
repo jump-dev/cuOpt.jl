@@ -28,5 +28,6 @@ export CUOPT_INCLUDE_PATH=/home/cuopt/.local/lib/python3.12/site-packages/libcuo
 Run the following command to generate the C wrapper for cuOpt:
 
 ```bash
-julia gen/gen.jl
+julia --project=gen -e 'using Pkg; Pkg.instantiate()'
+julia --project=gen gen/gen.jl
 ```
