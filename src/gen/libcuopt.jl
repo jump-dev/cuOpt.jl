@@ -99,6 +99,22 @@ function cuOptReadProblem(filename, problem_ptr)
 end
 
 """
+    cuOptWriteProblem(problem, filename, format)
+
+Write an optimization problem to a file.
+
+# Arguments
+* `problem`:\\[in\\] - The optimization problem to write.
+* `filename`:\\[in\\] - The path to the output file.
+* `format`:\\[in\\] - The file format to use. Currently only [`CUOPT_FILE_FORMAT_MPS`](@ref) is supported.
+# Returns
+A status code indicating success or failure. Returns [`CUOPT_INVALID_ARGUMENT`](@ref) if an unsupported format is specified.
+"""
+function cuOptWriteProblem(problem, filename, format)
+    ccall((:cuOptWriteProblem, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{Cchar}, cuopt_int_t), problem, filename, format)
+end
+
+"""
     cuOptCreateProblem(num_constraints, num_variables, objective_sense, objective_offset, objective_coefficients, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficent_values, constraint_sense, rhs, lower_bounds, upper_bounds, variable_types, problem_ptr)
 
 Create an optimization problem of the form
@@ -581,6 +597,154 @@ function cuOptGetFloatParameter(settings, parameter_name, parameter_value)
     ccall((:cuOptGetFloatParameter, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{Cchar}, Ptr{cuopt_float_t}), settings, parameter_name, parameter_value)
 end
 
+# typedef void ( * cuOptMIPGetSolutionCallback ) ( const cuopt_float_t * solution , const cuopt_float_t * objective_value , const cuopt_float_t * solution_bound , void * user_data )
+"""
+Type of callback for receiving incumbent MIP solutions with user context.
+
+!!! note
+
+    All pointer arguments (solution, objective\\_value, solution\\_bound, user\\_data) refer to host memory and are only valid during the callback invocation. Do not pass device/GPU pointers. Copy any data you need to keep after the callback returns.
+
+# Arguments
+* `solution`:\\[in\\] - Pointer to incumbent solution values. The allocated array for solution pointer must be at least the number of variables in the original problem.
+* `objective_value`:\\[in\\] - Pointer to incumbent objective value.
+* `solution_bound`:\\[in\\] - Pointer to current solution (dual/user) bound.
+* `user_data`:\\[in\\] - Pointer to user data.
+"""
+const cuOptMIPGetSolutionCallback = Ptr{Cvoid}
+
+# typedef void ( * cuOptMIPSetSolutionCallback ) ( cuopt_float_t * solution , cuopt_float_t * objective_value , const cuopt_float_t * solution_bound , void * user_data )
+"""
+Type of callback for injecting MIP solutions with user context.
+
+!!! note
+
+    All pointer arguments (solution, objective\\_value, solution\\_bound, user\\_data) refer to host memory and are only valid during the callback invocation. Do not pass device/GPU pointers. Copy any data you need to keep after the callback returns.
+
+# Arguments
+* `solution`:\\[out\\] - Pointer to solution values to set. The allocated array for solution pointer must be at least the number of variables in the original problem.
+* `objective_value`:\\[out\\] - Pointer to objective value to set.
+* `solution_bound`:\\[in\\] - Pointer to current solution (dual/user) bound.
+* `user_data`:\\[in\\] - Pointer to user data.
+"""
+const cuOptMIPSetSolutionCallback = Ptr{Cvoid}
+
+"""
+    cuOptSetMIPGetSolutionCallback(settings, callback, user_data)
+
+Register a callback to receive incumbent MIP solutions.
+
+!!! note
+
+    The callback arguments refer to host memory and are only valid during the callback invocation. Do not pass device/GPU pointers. Copy any data you need to keep after the callback returns.
+
+# Arguments
+* `settings`:\\[in\\] - The solver settings object.
+* `callback`:\\[in\\] - Callback function to receive incumbent solutions.
+* `user_data`:\\[in\\] - User-defined pointer passed through to the callback. It will be forwarded to `[`cuOptMIPGetSolutionCallback`](@ref)` when invoked.
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptSetMIPGetSolutionCallback(settings, callback, user_data)
+    ccall((:cuOptSetMIPGetSolutionCallback, libcuopt), cuopt_int_t, (cuOptSolverSettings, cuOptMIPGetSolutionCallback, Ptr{Cvoid}), settings, callback, user_data)
+end
+
+"""
+    cuOptSetMIPSetSolutionCallback(settings, callback, user_data)
+
+Register a callback to inject MIP solutions.
+
+!!! note
+
+    Registering a set-solution callback disables presolve.
+
+!!! note
+
+    The callback arguments refer to host memory and are only valid during the callback invocation. Do not pass device/GPU pointers. Copy any data you need to keep after the callback returns.
+
+# Arguments
+* `settings`:\\[in\\] - The solver settings object.
+* `callback`:\\[in\\] - Callback function to inject solutions.
+* `user_data`:\\[in\\] - User-defined pointer passed through to the callback. It will be forwarded to `[`cuOptMIPSetSolutionCallback`](@ref)` when invoked.
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptSetMIPSetSolutionCallback(settings, callback, user_data)
+    ccall((:cuOptSetMIPSetSolutionCallback, libcuopt), cuopt_int_t, (cuOptSolverSettings, cuOptMIPSetSolutionCallback, Ptr{Cvoid}), settings, callback, user_data)
+end
+
+"""
+    cuOptSetInitialPrimalSolution(settings, primal_solution, num_variables)
+
+Set the initial primal solution for an LP solve.
+
+!!! note
+
+    This function is only supported for PDLP.
+
+!!! note
+
+    All pointer arguments (primal\\_solution) refer to host memory.
+
+# Arguments
+* `settings`:\\[in\\] - The solver settings object.
+* `primal_solution`:\\[in\\] - A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_variables containing the initial primal values.
+* `num_variables`:\\[in\\] - The number of variables (size of the primal\\_solution array).
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptSetInitialPrimalSolution(settings, primal_solution, num_variables)
+    ccall((:cuOptSetInitialPrimalSolution, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{cuopt_float_t}, cuopt_int_t), settings, primal_solution, num_variables)
+end
+
+"""
+    cuOptSetInitialDualSolution(settings, dual_solution, num_constraints)
+
+Set the initial dual solution for an LP solve.
+
+!!! note
+
+    This function is only supported for PDLP.
+
+!!! note
+
+    All pointer arguments (dual\\_solution) refer to host memory.
+
+# Arguments
+* `settings`:\\[in\\] - The solver settings object.
+* `dual_solution`:\\[in\\] - A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_constraints containing the initial dual values.
+* `num_constraints`:\\[in\\] - The number of constraints (size of the dual\\_solution array).
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptSetInitialDualSolution(settings, dual_solution, num_constraints)
+    ccall((:cuOptSetInitialDualSolution, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{cuopt_float_t}, cuopt_int_t), settings, dual_solution, num_constraints)
+end
+
+"""
+    cuOptAddMIPStart(settings, solution, num_variables)
+
+Add an initial solution (MIP start) for MIP solving.
+
+This function can be called multiple times to add multiple MIP starts. The solver will use these as starting points for the MIP search.
+
+\\attention Currently unsupported with presolve on.
+
+!!! note
+
+    All pointer arguments (solution) refer to host memory.
+
+# Arguments
+* `settings`:\\[in\\] - The solver settings object.
+* `solution`:\\[in\\] - A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_variables containing the solution values.
+* `num_variables`:\\[in\\] - The number of variables (size of the solution array).
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptAddMIPStart(settings, solution, num_variables)
+    ccall((:cuOptAddMIPStart, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{cuopt_float_t}, cuopt_int_t), settings, solution, num_variables)
+end
+
 """
     cuOptIsMIP(problem, is_mip_ptr)
 
@@ -788,6 +952,8 @@ const CUOPT_ITERATION_LIMIT = "iteration_limit"
 
 const CUOPT_TIME_LIMIT = "time_limit"
 
+const CUOPT_WORK_LIMIT = "work_limit"
+
 const CUOPT_PDLP_SOLVER_MODE = "pdlp_solver_mode"
 
 const CUOPT_METHOD = "method"
@@ -822,6 +988,8 @@ const CUOPT_PRESOLVE = "presolve"
 
 const CUOPT_DUAL_POSTSOLVE = "dual_postsolve"
 
+const CUOPT_MIP_DETERMINISM_MODE = "mip_determinism_mode"
+
 const CUOPT_MIP_ABSOLUTE_TOLERANCE = "mip_absolute_tolerance"
 
 const CUOPT_MIP_RELATIVE_TOLERANCE = "mip_relative_tolerance"
@@ -838,6 +1006,26 @@ const CUOPT_MIP_SCALING = "mip_scaling"
 
 const CUOPT_MIP_PRESOLVE = "mip_presolve"
 
+const CUOPT_MIP_RELIABILITY_BRANCHING = "mip_reliability_branching"
+
+const CUOPT_MIP_CUT_PASSES = "mip_cut_passes"
+
+const CUOPT_MIP_MIXED_INTEGER_ROUNDING_CUTS = "mip_mixed_integer_rounding_cuts"
+
+const CUOPT_MIP_MIXED_INTEGER_GOMORY_CUTS = "mip_mixed_integer_gomory_cuts"
+
+const CUOPT_MIP_KNAPSACK_CUTS = "mip_knapsack_cuts"
+
+const CUOPT_MIP_STRONG_CHVATAL_GOMORY_CUTS = "mip_strong_chvatal_gomory_cuts"
+
+const CUOPT_MIP_REDUCED_COST_STRENGTHENING = "mip_reduced_cost_strengthening"
+
+const CUOPT_MIP_CUT_CHANGE_THRESHOLD = "mip_cut_change_threshold"
+
+const CUOPT_MIP_CUT_MIN_ORTHOGONALITY = "mip_cut_min_orthogonality"
+
+const CUOPT_MIP_BATCH_PDLP_STRONG_BRANCHING = "mip_batch_pdlp_strong_branching"
+
 const CUOPT_SOLUTION_FILE = "solution_file"
 
 const CUOPT_NUM_CPU_THREADS = "num_cpu_threads"
@@ -845,6 +1033,12 @@ const CUOPT_NUM_CPU_THREADS = "num_cpu_threads"
 const CUOPT_NUM_GPUS = "num_gpus"
 
 const CUOPT_USER_PROBLEM_FILE = "user_problem_file"
+
+const CUOPT_RANDOM_SEED = "random_seed"
+
+const CUOPT_MODE_OPPORTUNISTIC = 0
+
+const CUOPT_MODE_DETERMINISTIC = 1
 
 const CUOPT_TERIMINATION_STATUS_NO_TERMINATION = 0
 
@@ -865,6 +1059,8 @@ const CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE = 7
 const CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND = 8
 
 const CUOPT_TERIMINATION_STATUS_CONCURRENT_LIMIT = 9
+
+const CUOPT_TERIMINATION_STATUS_WORK_LIMIT = 10
 
 const CUOPT_MINIMIZE = 1
 
@@ -900,6 +1096,8 @@ const CUOPT_METHOD_DUAL_SIMPLEX = 2
 
 const CUOPT_METHOD_BARRIER = 3
 
+const CUOPT_FILE_FORMAT_MPS = 0
+
 const CUOPT_SUCCESS = 0
 
 const CUOPT_INVALID_ARGUMENT = 1
@@ -913,3 +1111,11 @@ const CUOPT_VALIDATION_ERROR = 4
 const CUOPT_OUT_OF_MEMORY = 5
 
 const CUOPT_RUNTIME_ERROR = 6
+
+const CUOPT_PRESOLVE_DEFAULT = -1
+
+const CUOPT_PRESOLVE_OFF = 0
+
+const CUOPT_PRESOLVE_PAPILO = 1
+
+const CUOPT_PRESOLVE_PSLP = 2
