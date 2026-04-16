@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,7 +99,7 @@ function test_Direct_C_call()
     termination_status = Ref{Cint}(0)
     ret = cuOpt.cuOptGetTerminationStatus(solution, termination_status)
     @test ret == 0
-    @test termination_status[] == cuOpt.CUOPT_TERIMINATION_STATUS_OPTIMAL
+    @test termination_status[] == cuOpt.CUOPT_TERMINATION_STATUS_OPTIMAL
 
     cuOpt.cuOptDestroySolution(solution_ref)
     cuOpt.cuOptDestroySolverSettings(settings_ref)
@@ -163,7 +163,7 @@ function test_QuadraticProblem_C_call()
     termination_status = Ref{Cint}(0)
     ret = cuOpt.cuOptGetTerminationStatus(solution, termination_status)
     @test ret == 0
-    @test termination_status[] == cuOpt.CUOPT_TERIMINATION_STATUS_OPTIMAL
+    @test termination_status[] == cuOpt.CUOPT_TERMINATION_STATUS_OPTIMAL
 
     obj_value = Ref{Cdouble}(0.0)
     ret = cuOpt.cuOptGetObjectiveValue(solution, obj_value)
@@ -232,7 +232,7 @@ function test_QuadraticRangedProblem_C_call()
     termination_status = Ref{Cint}(0)
     ret = cuOpt.cuOptGetTerminationStatus(solution, termination_status)
     @test ret == 0
-    @test termination_status[] == cuOpt.CUOPT_TERIMINATION_STATUS_OPTIMAL
+    @test termination_status[] == cuOpt.CUOPT_TERMINATION_STATUS_OPTIMAL
 
     obj_value = Ref{Cdouble}(0.0)
     ret = cuOpt.cuOptGetObjectiveValue(solution, obj_value)

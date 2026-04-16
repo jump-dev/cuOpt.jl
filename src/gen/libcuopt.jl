@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -1016,6 +1016,10 @@ const CUOPT_MIP_MIXED_INTEGER_GOMORY_CUTS = "mip_mixed_integer_gomory_cuts"
 
 const CUOPT_MIP_KNAPSACK_CUTS = "mip_knapsack_cuts"
 
+const CUOPT_MIP_IMPLIED_BOUND_CUTS = "mip_implied_bound_cuts"
+
+const CUOPT_MIP_CLIQUE_CUTS = "mip_clique_cuts"
+
 const CUOPT_MIP_STRONG_CHVATAL_GOMORY_CUTS = "mip_strong_chvatal_gomory_cuts"
 
 const CUOPT_MIP_REDUCED_COST_STRENGTHENING = "mip_reduced_cost_strengthening"
@@ -1026,6 +1030,10 @@ const CUOPT_MIP_CUT_MIN_ORTHOGONALITY = "mip_cut_min_orthogonality"
 
 const CUOPT_MIP_BATCH_PDLP_STRONG_BRANCHING = "mip_batch_pdlp_strong_branching"
 
+const CUOPT_MIP_BATCH_PDLP_RELIABILITY_BRANCHING = "mip_batch_pdlp_reliability_branching"
+
+const CUOPT_MIP_STRONG_BRANCHING_SIMPLEX_ITERATION_LIMIT = "mip_strong_branching_simplex_iteration_limit"
+
 const CUOPT_SOLUTION_FILE = "solution_file"
 
 const CUOPT_NUM_CPU_THREADS = "num_cpu_threads"
@@ -1034,31 +1042,73 @@ const CUOPT_NUM_GPUS = "num_gpus"
 
 const CUOPT_USER_PROBLEM_FILE = "user_problem_file"
 
+const CUOPT_PRESOLVE_FILE = "presolve_file"
+
 const CUOPT_RANDOM_SEED = "random_seed"
+
+const CUOPT_PDLP_PRECISION = "pdlp_precision"
+
+const CUOPT_MIP_HYPER_HEURISTIC_POPULATION_SIZE = "mip_hyper_heuristic_population_size"
+
+const CUOPT_MIP_HYPER_HEURISTIC_NUM_CPUFJ_THREADS = "mip_hyper_heuristic_num_cpufj_threads"
+
+const CUOPT_MIP_HYPER_HEURISTIC_PRESOLVE_TIME_RATIO = "mip_hyper_heuristic_presolve_time_ratio"
+
+const CUOPT_MIP_HYPER_HEURISTIC_PRESOLVE_MAX_TIME = "mip_hyper_heuristic_presolve_max_time"
+
+const CUOPT_MIP_HYPER_HEURISTIC_ROOT_LP_TIME_RATIO = "mip_hyper_heuristic_root_lp_time_ratio"
+
+const CUOPT_MIP_HYPER_HEURISTIC_ROOT_LP_MAX_TIME = "mip_hyper_heuristic_root_lp_max_time"
+
+const CUOPT_MIP_HYPER_HEURISTIC_RINS_TIME_LIMIT = "mip_hyper_heuristic_rins_time_limit"
+
+const CUOPT_MIP_HYPER_HEURISTIC_RINS_MAX_TIME_LIMIT = "mip_hyper_heuristic_rins_max_time_limit"
+
+const CUOPT_MIP_HYPER_HEURISTIC_RINS_FIX_RATE = "mip_hyper_heuristic_rins_fix_rate"
+
+const CUOPT_MIP_HYPER_HEURISTIC_STAGNATION_TRIGGER = "mip_hyper_heuristic_stagnation_trigger"
+
+const CUOPT_MIP_HYPER_HEURISTIC_MAX_ITERS_WITHOUT_IMPROVEMENT = "mip_hyper_heuristic_max_iterations_without_improvement"
+
+const CUOPT_MIP_HYPER_HEURISTIC_INITIAL_INFEASIBILITY_WEIGHT = "mip_hyper_heuristic_initial_infeasibility_weight"
+
+const CUOPT_MIP_HYPER_HEURISTIC_N_OF_MINIMUMS_FOR_EXIT = "mip_hyper_heuristic_n_of_minimums_for_exit"
+
+const CUOPT_MIP_HYPER_HEURISTIC_ENABLED_RECOMBINERS = "mip_hyper_heuristic_enabled_recombiners"
+
+const CUOPT_MIP_HYPER_HEURISTIC_CYCLE_DETECTION_LENGTH = "mip_hyper_heuristic_cycle_detection_length"
+
+const CUOPT_MIP_HYPER_HEURISTIC_RELAXED_LP_TIME_LIMIT = "mip_hyper_heuristic_relaxed_lp_time_limit"
+
+const CUOPT_MIP_HYPER_HEURISTIC_RELATED_VARS_TIME_LIMIT = "mip_hyper_heuristic_related_vars_time_limit"
 
 const CUOPT_MODE_OPPORTUNISTIC = 0
 
 const CUOPT_MODE_DETERMINISTIC = 1
 
-const CUOPT_TERIMINATION_STATUS_NO_TERMINATION = 0
+const CUOPT_TERMINATION_STATUS_NO_TERMINATION = 0
 
-const CUOPT_TERIMINATION_STATUS_OPTIMAL = 1
+const CUOPT_TERMINATION_STATUS_OPTIMAL = 1
 
-const CUOPT_TERIMINATION_STATUS_INFEASIBLE = 2
+const CUOPT_TERMINATION_STATUS_INFEASIBLE = 2
 
-const CUOPT_TERIMINATION_STATUS_UNBOUNDED = 3
+const CUOPT_TERMINATION_STATUS_UNBOUNDED = 3
 
-const CUOPT_TERIMINATION_STATUS_ITERATION_LIMIT = 4
+const CUOPT_TERMINATION_STATUS_ITERATION_LIMIT = 4
 
-const CUOPT_TERIMINATION_STATUS_TIME_LIMIT = 5
+const CUOPT_TERMINATION_STATUS_TIME_LIMIT = 5
 
-const CUOPT_TERIMINATION_STATUS_NUMERICAL_ERROR = 6
+const CUOPT_TERMINATION_STATUS_NUMERICAL_ERROR = 6
 
-const CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE = 7
+const CUOPT_TERMINATION_STATUS_PRIMAL_FEASIBLE = 7
 
-const CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND = 8
+const CUOPT_TERMINATION_STATUS_FEASIBLE_FOUND = 8
 
-const CUOPT_TERIMINATION_STATUS_CONCURRENT_LIMIT = 9
+const CUOPT_TERMINATION_STATUS_CONCURRENT_LIMIT = 9
+
+const CUOPT_TERMINATION_STATUS_WORK_LIMIT = 10
+
+const CUOPT_TERMINATION_STATUS_UNBOUNDED_OR_INFEASIBLE = 11
 
 const CUOPT_TERIMINATION_STATUS_WORK_LIMIT = 10
 
@@ -1096,6 +1146,16 @@ const CUOPT_METHOD_DUAL_SIMPLEX = 2
 
 const CUOPT_METHOD_BARRIER = 3
 
+const CUOPT_METHOD_UNSET = 4
+
+const CUOPT_PDLP_DEFAULT_PRECISION = -1
+
+const CUOPT_PDLP_SINGLE_PRECISION = 0
+
+const CUOPT_PDLP_DOUBLE_PRECISION = 1
+
+const CUOPT_PDLP_MIXED_PRECISION = 2
+
 const CUOPT_FILE_FORMAT_MPS = 0
 
 const CUOPT_SUCCESS = 0
@@ -1119,3 +1179,9 @@ const CUOPT_PRESOLVE_OFF = 0
 const CUOPT_PRESOLVE_PAPILO = 1
 
 const CUOPT_PRESOLVE_PSLP = 2
+
+const CUOPT_MIP_SCALING_OFF = 0
+
+const CUOPT_MIP_SCALING_ON = 1
+
+const CUOPT_MIP_SCALING_NO_OBJECTIVE = 2
