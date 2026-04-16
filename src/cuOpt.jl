@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,7 +46,7 @@ function __init__()
         error("Failed to get cuOpt library version (status code: $status)")
     end
     version = VersionNumber(major[], minor[], patch[])
-    min, max = v"26.02", v"26.03"
+    min, max = v"26.04", v"26.05"
     if !(min <= version < max)
         error(
             "Incompatible cuOpt library version. Got $version, but supported versions are [$min, $max)",

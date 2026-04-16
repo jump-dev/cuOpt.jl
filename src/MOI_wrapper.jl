@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -179,7 +179,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         model.primal_solution = Float64[]
         model.dual_solution = Float64[]
         model.obj_value = 0.0
-        model.termination_status = CUOPT_TERIMINATION_STATUS_NO_TERMINATION
+        model.termination_status = CUOPT_TERMINATION_STATUS_NO_TERMINATION
         return model
     end
 end
@@ -263,26 +263,32 @@ function MOI.get(model::Optimizer, ::MOI.NumberOfVariables)
 end
 
 const _TerminationStatusMap = Dict(
-    CUOPT_TERIMINATION_STATUS_NO_TERMINATION =>
+    CUOPT_TERMINATION_STATUS_NO_TERMINATION =>
         (MOI.OPTIMIZE_NOT_CALLED, "cuOptModelStatusNotset"),
-    CUOPT_TERIMINATION_STATUS_OPTIMAL =>
+    CUOPT_TERMINATION_STATUS_OPTIMAL =>
         (MOI.OPTIMAL, "cuOptModelStatusOptimal"),
-    CUOPT_TERIMINATION_STATUS_INFEASIBLE =>
+    CUOPT_TERMINATION_STATUS_INFEASIBLE =>
         (MOI.INFEASIBLE, "cuOptModelStatusInfeasible"),
-    CUOPT_TERIMINATION_STATUS_UNBOUNDED =>
+    CUOPT_TERMINATION_STATUS_UNBOUNDED =>
         (MOI.DUAL_INFEASIBLE, "cuOptModelStatusUnbounded"),
-    CUOPT_TERIMINATION_STATUS_ITERATION_LIMIT =>
+    CUOPT_TERMINATION_STATUS_ITERATION_LIMIT =>
         (MOI.ITERATION_LIMIT, "cuOptModelStatusIterationLimit"),
-    CUOPT_TERIMINATION_STATUS_TIME_LIMIT =>
+    CUOPT_TERMINATION_STATUS_TIME_LIMIT =>
         (MOI.TIME_LIMIT, "cuOptModelStatusTimeLimit"),
-    CUOPT_TERIMINATION_STATUS_NUMERICAL_ERROR =>
+    CUOPT_TERMINATION_STATUS_NUMERICAL_ERROR =>
         (MOI.NUMERICAL_ERROR, "cuOptModelStatusNumericalError"),
-    CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE =>
+    CUOPT_TERMINATION_STATUS_PRIMAL_FEASIBLE =>
         (MOI.OTHER_LIMIT, "cuOptModelStatusPrimalFeasible"),
-    CUOPT_TERIMINATION_STATUS_CONCURRENT_LIMIT =>
-        (MOI.OTHER_ERROR, "cuOptModelStatusConcurrent"),
-    CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND =>
+    CUOPT_TERMINATION_STATUS_FEASIBLE_FOUND =>
         (MOI.OTHER_LIMIT, "cuOptModelStatusFeasible"),
+    CUOPT_TERMINATION_STATUS_CONCURRENT_LIMIT =>
+        (MOI.OTHER_ERROR, "cuOptModelStatusConcurrent"),
+    CUOPT_TERMINATION_STATUS_WORK_LIMIT =>
+        (MOI.OTHER_LIMIT, "cuOptModelStatusWorkLimit"),
+    CUOPT_TERMINATION_STATUS_UNBOUNDED_OR_INFEASIBLE => (
+        MOI.INFEASIBLE_OR_UNBOUNDED,
+        "cuOptModelStatusUnboundedOrInfeasible",
+    ),
 )
 
 function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
@@ -419,10 +425,10 @@ end
 
 function MOI.get(model::Optimizer, ::MOI.ResultCount)
     status = model.termination_status
-    if status == CUOPT_TERIMINATION_STATUS_OPTIMAL ||
-       status == CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE ||
-       status == CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND ||
-       status == CUOPT_TERIMINATION_STATUS_UNBOUNDED
+    if status == CUOPT_TERMINATION_STATUS_OPTIMAL ||
+       status == CUOPT_TERMINATION_STATUS_PRIMAL_FEASIBLE ||
+       status == CUOPT_TERMINATION_STATUS_FEASIBLE_FOUND ||
+       status == CUOPT_TERMINATION_STATUS_UNBOUNDED
         return 1
     end
     return 0
@@ -432,11 +438,11 @@ function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
     status = model.termination_status
     if attr.result_index != 1
         return MOI.NO_SOLUTION
-    elseif status == CUOPT_TERIMINATION_STATUS_OPTIMAL ||
-           status == CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE ||
-           status == CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND
+    elseif status == CUOPT_TERMINATION_STATUS_OPTIMAL ||
+           status == CUOPT_TERMINATION_STATUS_PRIMAL_FEASIBLE ||
+           status == CUOPT_TERMINATION_STATUS_FEASIBLE_FOUND
         return MOI.FEASIBLE_POINT
-    elseif status == CUOPT_TERIMINATION_STATUS_INFEASIBLE
+    elseif status == CUOPT_TERMINATION_STATUS_INFEASIBLE
         return MOI.INFEASIBLE_POINT
     end
     return MOI.NO_SOLUTION
@@ -446,7 +452,7 @@ function MOI.get(model::Optimizer, attr::MOI.DualStatus)
     status = model.termination_status
     if attr.result_index != 1
         return MOI.NO_SOLUTION
-    elseif status == CUOPT_TERIMINATION_STATUS_OPTIMAL
+    elseif status == CUOPT_TERMINATION_STATUS_OPTIMAL
         return MOI.FEASIBLE_POINT
     end
     return MOI.NO_SOLUTION
@@ -560,7 +566,7 @@ function MOI.empty!(model::Optimizer)
     model.primal_solution = Float64[]
     model.dual_solution = Float64[]
     model.obj_value = NaN
-    model.termination_status = CUOPT_TERIMINATION_STATUS_NO_TERMINATION
+    model.termination_status = CUOPT_TERMINATION_STATUS_NO_TERMINATION
 
     if model.cuopt_problem != C_NULL
         a = Ref(model.cuopt_problem)
