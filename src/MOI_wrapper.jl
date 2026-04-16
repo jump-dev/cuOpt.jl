@@ -285,8 +285,10 @@ const _TerminationStatusMap = Dict(
         (MOI.OTHER_ERROR, "cuOptModelStatusConcurrent"),
     CUOPT_TERMINATION_STATUS_WORK_LIMIT =>
         (MOI.OTHER_LIMIT, "cuOptModelStatusWorkLimit"),
-    CUOPT_TERMINATION_STATUS_UNBOUNDED_OR_INFEASIBLE =>
-        (MOI.INFEASIBLE_OR_UNBOUNDED, "cuOptModelStatusUnboundedOrInfeasible"),
+    CUOPT_TERMINATION_STATUS_UNBOUNDED_OR_INFEASIBLE => (
+        MOI.INFEASIBLE_OR_UNBOUNDED,
+        "cuOptModelStatusUnboundedOrInfeasible",
+    ),
 )
 
 function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
