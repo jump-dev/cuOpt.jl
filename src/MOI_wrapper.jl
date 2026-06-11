@@ -18,8 +18,6 @@
 # The HiGHS wrapper is released under an MIT license, a copy of which can be
 # found in `/thirdparty/THIRD_PARTY_LICENSES` or at https://opensource.org/licenses/MIT.
 
-import SparseArrays
-
 import MathOptInterface as MOI
 const CleverDicts = MOI.Utilities.CleverDicts
 
@@ -45,7 +43,13 @@ _bounds(s::MOI.EqualTo{Float64}) = s.value, s.value
     _BOUND_EQUAL_TO,
 )
 
-@enum(_TypeEnum, _TYPE_CONTINUOUS, _TYPE_INTEGER, _TYPE_BINARY,)
+@enum(
+    _TypeEnum,
+    _TYPE_CONTINUOUS,
+    _TYPE_INTEGER,
+    _TYPE_BINARY,
+    _TYPE_SEMICONTINUOUS,
+)
 
 """
     _VariableInfo
@@ -124,6 +128,29 @@ function _constraint_info_dict()
 end
 
 """
+    _QuadraticConstraintInfo
+
+A struct to store information about a quadratic constraint. cuOpt stores
+quadratic constraints internally; this struct only keeps the MOI-facing
+metadata so that the wrapper can answer queries after `copy_to`.
+"""
+mutable struct _QuadraticConstraintInfo
+    name::String
+    # CUOPT_LESS_THAN or CUOPT_GREATER_THAN
+    sense::Cchar
+    # The right-hand side of the original MOI set (before the function constant
+    # is folded into the cuOpt rhs).
+    set_rhs::Float64
+end
+
+function _quadratic_constraint_info_dict()
+    return CleverDicts.CleverDict{_ConstraintKey,_QuadraticConstraintInfo}(
+        c -> c.value,
+        i -> _ConstraintKey(i),
+    )
+end
+
+"""
     _set(c::_ConstraintInfo)
 
 Return the set associated with a constraint.
@@ -153,6 +180,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 
     variable_info::typeof(_variable_info_dict())
     affine_constraint_info::typeof(_constraint_info_dict())
+    quadratic_constraint_info::typeof(_quadratic_constraint_info_dict())
 
     raw_optimizer_attributes::Dict{String,Any}
     objective_sense::Union{Nothing,MOI.OptimizationSense}
@@ -173,6 +201,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 
         model.variable_info = _variable_info_dict()
         model.affine_constraint_info = _constraint_info_dict()
+        model.quadratic_constraint_info = _quadratic_constraint_info_dict()
 
         model.raw_optimizer_attributes = Dict{String,Any}()
 
@@ -191,6 +220,7 @@ MOI.supports_incremental_interface(::Optimizer) = false
 function MOI.is_empty(model::Optimizer)
     return length(model.variable_info) == 0 &&
            length(model.affine_constraint_info) == 0 &&
+           length(model.quadratic_constraint_info) == 0 &&
            model.objective_sense == nothing &&
            model.name == ""
 end
@@ -246,7 +276,10 @@ function MOI.get(model::Optimizer, ::MOI.TimeLimitSec)
 end
 #MOI.get(model::Optimizer, ::MOI.ObjectiveLimit) = model.objective_limit
 #MOI.get(model::Optimizer, ::MOI.SolutionLimit) = model.solution_limit
-#MOI.get(model::Optimizer, ::MOI.NodeLimit) = model.node_limit
+
+function MOI.get(model::Optimizer, ::MOI.NodeLimit)
+    return MOI.get(model, MOI.RawOptimizerAttribute(CUOPT_NODE_LIMIT))
+end
 
 function MOI.get(model::Optimizer, ::MOI.NumberOfThreads)
     return MOI.get(model, MOI.RawOptimizerAttribute(CUOPT_NUM_CPU_THREADS))
@@ -493,7 +526,18 @@ end
 
 #MOI.set(model::Optimizer, ::MOI.ObjectiveLimit, objective_limit::Float64) = model.objective_limit = objective_limit
 #MOI.set(model::Optimizer, ::MOI.SolutionLimit, solution_limit::Int) = model.solution_limit = solution_limit
-#MOI.set(model::Optimizer, ::MOI.NodeLimit, node_limit::Int) = model.node_limit = node_limit
+
+function MOI.set(
+    model::Optimizer,
+    ::MOI.NodeLimit,
+    node_limit::Union{Integer,Nothing},
+)
+    return MOI.set(
+        model,
+        MOI.RawOptimizerAttribute(CUOPT_NODE_LIMIT),
+        node_limit,
+    )
+end
 
 function MOI.set(
     model::Optimizer,
@@ -550,7 +594,7 @@ MOI.supports(::Optimizer, ::MOI.Silent) = true
 MOI.supports(::Optimizer, ::MOI.TimeLimitSec) = true
 MOI.supports(::Optimizer, ::MOI.ObjectiveLimit) = false
 MOI.supports(::Optimizer, ::MOI.SolutionLimit) = false
-MOI.supports(::Optimizer, ::MOI.NodeLimit) = false
+MOI.supports(::Optimizer, ::MOI.NodeLimit) = true
 MOI.supports(::Optimizer, ::MOI.RawOptimizerAttribute) = true
 MOI.supports(::Optimizer, ::MOI.NumberOfThreads) = true
 MOI.supports(::Optimizer, ::MOI.AbsoluteGapTolerance) = true
@@ -564,6 +608,7 @@ function MOI.empty!(model::Optimizer)
     # attribute silent should not be cleared
     model.variable_info = _variable_info_dict()
     model.affine_constraint_info = _constraint_info_dict()
+    model.quadratic_constraint_info = _quadratic_constraint_info_dict()
     model.objective_sense = nothing
     model.primal_solution = Float64[]
     model.dual_solution = Float64[]
@@ -609,12 +654,21 @@ function MOI.supports_constraint(
     return true
 end
 
-# does not support semicontinuous and semiinteger constraints on variables
+# supports semicontinuous variables via cuOpt's CUOPT_SEMI_CONTINUOUS variable
+# type. Semiinteger has no cuOpt counterpart and remains unsupported.
 function MOI.supports_constraint(
     ::Optimizer,
     ::Type{MOI.VariableIndex},
-    ::Type{S},
-) where {S<:Union{MOI.Semicontinuous{Float64},MOI.Semiinteger}}
+    ::Type{MOI.Semicontinuous{Float64}},
+)
+    return true
+end
+
+function MOI.supports_constraint(
+    ::Optimizer,
+    ::Type{MOI.VariableIndex},
+    ::Type{<:MOI.Semiinteger},
+)
     return false
 end
 
@@ -625,6 +679,29 @@ function MOI.supports_constraint(
     ::Type{<:_SCALAR_SETS},
 )
     return true
+end
+
+# supports L and G quadratic constraints (cuOpt's cuOptAddQuadraticConstraint
+# only accepts CUOPT_LESS_THAN or CUOPT_GREATER_THAN — EqualTo and Interval are
+# not supported).
+function MOI.supports_constraint(
+    ::Optimizer,
+    ::Type{MOI.ScalarQuadraticFunction{Float64}},
+    ::Type{<:Union{MOI.LessThan{Float64},MOI.GreaterThan{Float64}}},
+)
+    return true
+end
+
+# SecondOrderCone is lowered to ScalarQuadraticFunction via MOI's
+# SOCtoNonConvexQuadBridge: `Σxᵢ² − t² ≤ 0` plus an explicit `t ≥ 0` row.
+# cuOpt's barrier detects the SOC structure in this form ("Second-order cones :
+# N" in the solve log).
+#
+# TODO: also add RSOCtoNonConvexQuadBridge once
+# https://github.com/NVIDIA/cuopt/issues/1435 is fixed. For now RSOC flows
+# through MOI's default RSOCtoSOCBridge, chaining into SOCtoNonConvexQuadBridge.
+function MOI.get(::Optimizer, ::MOI.Bridges.ListOfNonstandardBridges{Float64})
+    return Type[MOI.Bridges.Constraint.SOCtoNonConvexQuadBridge{Float64}]
 end
 
 function MOI.supports(
@@ -904,6 +981,75 @@ function _extract_row_data(
     return
 end
 
+function _add_quadratic_constraints(
+    dest::Optimizer,
+    src::MOI.ModelLike,
+    mapping,
+    problem::cuOptOptimizationProblem,
+    ::Type{S},
+) where {S<:Union{MOI.LessThan{Float64},MOI.GreaterThan{Float64}}}
+    F = MOI.ScalarQuadraticFunction{Float64}
+    sense_char =
+        S == MOI.LessThan{Float64} ? CUOPT_LESS_THAN : CUOPT_GREATER_THAN
+    for c_index in _constraints(src, F, S)
+        f = MOI.get(src, MOI.ConstraintFunction(), c_index)
+        set = MOI.get(src, MOI.ConstraintSet(), c_index)
+
+        # Q in COO. Same convention as the objective: MOI's symmetric Q halved
+        # on the diagonal; off-diagonals carry the MOI coefficient as-is and
+        # duplicate (row, col) pairs are summed by cuOpt.
+        nq = length(f.quadratic_terms)
+        q_rows = Vector{Int32}(undef, nq)
+        q_cols = Vector{Int32}(undef, nq)
+        q_values = Vector{Float64}(undef, nq)
+        for (k, qterm) in enumerate(f.quadratic_terms)
+            i = mapping[qterm.variable_1].value
+            j = mapping[qterm.variable_2].value
+            v = qterm.coefficient
+            if i == j
+                v /= 2
+            end
+            q_rows[k] = Int32(i - 1)
+            q_cols[k] = Int32(j - 1)
+            q_values[k] = v
+        end
+
+        nl = length(f.affine_terms)
+        l_index = Vector{Int32}(undef, nl)
+        l_coef = Vector{Float64}(undef, nl)
+        for (k, aterm) in enumerate(f.affine_terms)
+            l_index[k] = Int32(mapping[aterm.variable].value - 1)
+            l_coef[k] = aterm.coefficient
+        end
+
+        set_rhs = S == MOI.LessThan{Float64} ? set.upper : set.lower
+        ret = cuOptAddQuadraticConstraint(
+            problem,
+            Int32(nq),
+            q_rows,
+            q_cols,
+            q_values,
+            Int32(nl),
+            l_index,
+            l_coef,
+            sense_char,
+            set_rhs - f.constant,
+        )
+        _check_ret(ret, "cuOptAddQuadraticConstraint")
+
+        key = CleverDicts.add_item(
+            dest.quadratic_constraint_info,
+            _QuadraticConstraintInfo("", sense_char, set_rhs),
+        )
+        if MOI.supports(src, MOI.ConstraintName(), MOI.ConstraintIndex{F,S})
+            dest.quadratic_constraint_info[key].name =
+                MOI.get(src, MOI.ConstraintName(), c_index)
+        end
+        mapping[c_index] = MOI.ConstraintIndex{F,S}(key.value)
+    end
+    return
+end
+
 function _get_objective_data(
     dest::Optimizer,
     src::MOI.ModelLike,
@@ -922,16 +1068,16 @@ function _get_objective_data(
 
     objective_offset,
     objective_coefficients_linear,
-    qobj_row_offsets,
-    qobj_col_indices,
-    qobj_matrix_values = _get_objective_data(f_obj, mapping, numcol)
+    qobj_rows,
+    qobj_cols,
+    qobj_values = _get_objective_data(f_obj, mapping, numcol)
 
     return objective_sense,
     objective_offset,
     objective_coefficients_linear,
-    qobj_row_offsets,
-    qobj_col_indices,
-    qobj_matrix_values
+    qobj_rows,
+    qobj_cols,
+    qobj_values
 end
 
 function _get_objective_data(
@@ -949,7 +1095,7 @@ function _get_objective_data(
 
     return objective_offset,
     objective_coefficients_linear,
-    Int32[0],
+    Int32[],
     Int32[],
     Float64[]
 end
@@ -967,45 +1113,33 @@ function _get_objective_data(
         objective_coefficients_linear[i] += term.coefficient
     end
 
-    # Extract quadratic objective
-    Qtrows = Int32[]
-    Qtcols = Int32[]
-    Qtvals = Float64[]
-    sizehint!(Qtrows, length(f_obj.quadratic_terms))
-    sizehint!(Qtcols, length(f_obj.quadratic_terms))
-    sizehint!(Qtvals, length(f_obj.quadratic_terms))
-    for qterm in f_obj.quadratic_terms
+    # MOI stores quadratic functions as `¹/₂ xᵀQx + aᵀx + b`, with `Q` symmetric...
+    # (https://jump.dev/MathOptInterface.jl/stable/reference/standard_form/#MathOptInterface.ScalarQuadraticFunction)
+    # ... whereas cuOpt expects a QP objective of the form `xᵀQx + aᵀx + b`,
+    #     where `Q` need not be symmetric
+    # --> diagonal coefficients are scaled by ¹/₂; off-diagonal terms keep their
+    #     MOI coefficient and are emitted once (cuOpt sums duplicate (row, col)).
+    nterms = length(f_obj.quadratic_terms)
+    qobj_rows = Vector{Int32}(undef, nterms)
+    qobj_cols = Vector{Int32}(undef, nterms)
+    qobj_values = Vector{Float64}(undef, nterms)
+    for (k, qterm) in enumerate(f_obj.quadratic_terms)
         i = mapping[qterm.variable_1].value
         j = mapping[qterm.variable_2].value
         v = qterm.coefficient
-        # MOI stores quadratic functions as `¹/₂ xᵀQx + aᵀx + b`, with `Q` symmetric...
-        # (https://jump.dev/MathOptInterface.jl/stable/reference/standard_form/#MathOptInterface.ScalarQuadraticFunction)
-        # ... whereas cuOpt expects a QP objective of the form `¹xᵀQx + aᵀx + b`,
-        #     where `Q` need not be symmetric
-        # --> we need to scale diagonal coeffs. by ¹/₂ to match cuOpt convention
         if i == j
             v /= 2
         end
-
-        # We are building a COO of Qᵀ --> swap i and j
-        push!(Qtrows, j)
-        push!(Qtcols, i)
-        push!(Qtvals, v)
+        qobj_rows[k] = Int32(i - 1)
+        qobj_cols[k] = Int32(j - 1)
+        qobj_values[k] = v
     end
-    # CSC of Qᵀ is CSR of Q
-    Qt = SparseArrays.sparse(Qtrows, Qtcols, Qtvals, numcol, numcol)
-    qobj_matrix_values = Qt.nzval
-    qobj_row_offsets = Qt.colptr
-    qobj_col_indices = Qt.rowval
-    # Revert to 0-based indexing
-    qobj_row_offsets .-= Int32(1)
-    qobj_col_indices .-= Int32(1)
 
     return objective_offset,
     objective_coefficients_linear,
-    qobj_row_offsets,
-    qobj_col_indices,
-    qobj_matrix_values
+    qobj_rows,
+    qobj_cols,
+    qobj_values
 end
 
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
@@ -1061,62 +1195,66 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
         mapping[ci] = typeof(ci)(new_x.value)
         has_integrality = true
     end
+    for ci in _constraints(src, MOI.VariableIndex, MOI.Semicontinuous{Float64})
+        info = _info(dest, ci)
+        info.type = _TYPE_SEMICONTINUOUS
+        var_type[info.column+1] = CUOPT_SEMI_CONTINUOUS
+        set = MOI.get(src, MOI.ConstraintSet(), ci)
+        # MOI: x ∈ {0} ∪ [set.lower, set.upper]. Pass [l, u] verbatim and rely
+        # on cuOpt's CUOPT_SEMI_CONTINUOUS type tag to OR with {0}.
+        collower[info.column+1] = max(collower[info.column+1], set.lower)
+        colupper[info.column+1] = min(colupper[info.column+1], set.upper)
+        new_x = mapping[MOI.VariableIndex(ci.value)]
+        mapping[ci] = typeof(ci)(new_x.value)
+        has_integrality = true
+    end
 
     objective_sense,
     objective_offset,
     objective_coefficients,
-    qobj_row_offsets,
-    qobj_col_indices,
-    qobj_matrix_values = _get_objective_data(dest, src, mapping, numcol)
+    qobj_rows,
+    qobj_cols,
+    qobj_values = _get_objective_data(dest, src, mapping, numcol)
 
-    # Is this a QP or an LP?
-    has_quadratic_objective = length(qobj_matrix_values) > 0
+    has_quadratic_objective = !isempty(qobj_values)
     if has_quadratic_objective && has_integrality
         error(
-            "cuOpt does not support models with quadratic objectives _and_ integer variables",
+            "cuOpt does not support models with quadratic objectives and integer or semi-continuous variables",
         )
     end
 
+    ref_problem = Ref{cuOptOptimizationProblem}()
+    ret = cuOptCreateRangedProblem(
+        numrow,
+        numcol,
+        objective_sense,
+        objective_offset,
+        objective_coefficients,
+        constraint_matrix_row_offsets,
+        constraint_matrix_column_indices,
+        constraint_matrix_coefficients,
+        rowlower,
+        rowupper,
+        collower,
+        colupper,
+        var_type,
+        ref_problem,
+    )
+    _check_ret(ret, "cuOptCreateRangedProblem")
+
     if has_quadratic_objective
-        ref_problem = Ref{cuOptOptimizationProblem}()
-        ret = cuOptCreateQuadraticRangedProblem(
-            numrow,
-            numcol,
-            objective_sense,
-            objective_offset,
-            objective_coefficients,
-            qobj_row_offsets,
-            qobj_col_indices,
-            qobj_matrix_values,
-            constraint_matrix_row_offsets,
-            constraint_matrix_column_indices,
-            constraint_matrix_coefficients,
-            rowlower,
-            rowupper,
-            collower,
-            colupper,
-            ref_problem,
+        ret = cuOptSetQuadraticObjective(
+            ref_problem[],
+            Int32(length(qobj_values)),
+            qobj_rows,
+            qobj_cols,
+            qobj_values,
         )
-        _check_ret(ret, "cuOptCreateQuadraticRangedProblem")
-    else
-        ref_problem = Ref{cuOptOptimizationProblem}()
-        ret = cuOptCreateRangedProblem(
-            numrow,
-            numcol,
-            objective_sense,
-            objective_offset,
-            objective_coefficients,
-            constraint_matrix_row_offsets,
-            constraint_matrix_column_indices,
-            constraint_matrix_coefficients,
-            rowlower,
-            rowupper,
-            collower,
-            colupper,
-            var_type,
-            ref_problem,
-        )
-        _check_ret(ret, "cuOptCreateRangedProblem")
+        _check_ret(ret, "cuOptSetQuadraticObjective")
+    end
+
+    for S in (MOI.LessThan{Float64}, MOI.GreaterThan{Float64})
+        _add_quadratic_constraints(dest, src, mapping, ref_problem[], S)
     end
 
     dest.cuopt_problem = ref_problem[]

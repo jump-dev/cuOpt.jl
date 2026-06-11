@@ -17,7 +17,7 @@
 #!format: off
 
 """
-A `[`cuOptOptimizationProblem`](@ref)` object contains a representation of an LP or MIP. It is created by `[`cuOptCreateProblem`](@ref)` or `[`cuOptCreateRangedProblem`](@ref)`. It is passed to `[`cuOptSolve`](@ref)`. It should be destroyed using `[`cuOptDestroyProblem`](@ref)`.
+A `[`cuOptOptimizationProblem`](@ref)` object contains a representation of an LP, MIP, QP, or QCQP. It is created by `[`cuOptCreateProblem`](@ref)`, `[`cuOptCreateRangedProblem`](@ref)`, or the quadratic create functions. Quadratic objectives and quadratic objectives and constraints may be set via `[`cuOptSetQuadraticObjective`](@ref)` and added via `[`cuOptAddQuadraticConstraint`](@ref)`. It is passed to `[`cuOptSolve`](@ref)` and destroyed with `[`cuOptDestroyProblem`](@ref)`.
 """
 const cuOptOptimizationProblem = Ptr{Cvoid}
 
@@ -41,7 +41,7 @@ The type of the integer number used by the solver. Use `[`cuOptGetIntSize`](@ref
 """
 const cuopt_int_t = Int32
 
-# no prototype is found for this function at cuopt_c.h:79:8, please use with caution
+# no prototype is found for this function at cuopt_c.h:82:8, please use with caution
 """
     cuOptGetFloatSize()
 
@@ -54,7 +54,7 @@ function cuOptGetFloatSize()
     ccall((:cuOptGetFloatSize, libcuopt), Int8, ())
 end
 
-# no prototype is found for this function at cuopt_c.h:84:8, please use with caution
+# no prototype is found for this function at cuopt_c.h:87:8, please use with caution
 """
     cuOptGetIntSize()
 
@@ -86,13 +86,15 @@ end
 """
     cuOptReadProblem(filename, problem_ptr)
 
-Read an optimization problem from an MPS file.
+Read an optimization problem from an MPS, QPS, or LP file.
+
+The file format is dispatched on the filename extension (case-insensitive): - ".lp", ".lp.gz", ".lp.bz2" → LP parser - ".mps", ".mps.gz", ".mps.bz2", ".qps", ".qps.gz", ".qps.bz2" → MPS parser - anything else (including no extension) is rejected.
 
 # Arguments
-* `filename`:\\[in\\] - The path to the MPS file.
-* `problem_ptr`:\\[out\\] - A pointer to a [`cuOptOptimizationProblem`](@ref). On output the problem will be created and initialized with the data from the MPS file
+* `filename`:\\[in\\] - The path to the MPS, QPS, or LP file. Must be a non-null, non-empty C string.
+* `problem_ptr`:\\[out\\] - A non-null pointer to a [`cuOptOptimizationProblem`](@ref). On output the problem will be created and initialized with the data from the input file.
 # Returns
-A status code indicating success or failure.
+A status code indicating success or failure. Returns [`CUOPT_INVALID_ARGUMENT`](@ref) if filename is null or empty, or if problem\\_ptr is null.
 """
 function cuOptReadProblem(filename, problem_ptr)
     ccall((:cuOptReadProblem, libcuopt), cuopt_int_t, (Ptr{Cchar}, Ptr{cuOptOptimizationProblem}), filename, problem_ptr)
@@ -139,7 +141,7 @@ Create an optimization problem of the form
 * `rhs`:\\[in\\] A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_constraints containing the right-hand side of the constraints
 * `lower_bounds`:\\[in\\] A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_variables containing the lower bounds of the variables
 * `upper_bounds`:\\[in\\] A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_variables containing the upper bounds of the variables
-* `variable_types`:\\[in\\] A pointer to an array of type char of size num\\_variables containing the types of the variables ([`CUOPT_CONTINUOUS`](@ref) or [`CUOPT_INTEGER`](@ref))
+* `variable_types`:\\[in\\] A pointer to an array of type char of size num\\_variables containing the types of the variables ([`CUOPT_CONTINUOUS`](@ref), [`CUOPT_INTEGER`](@ref), or [`CUOPT_SEMI_CONTINUOUS`](@ref))
 * `problem_ptr`:\\[out\\] Pointer to store the created optimization problem
 # Returns
 [`CUOPT_SUCCESS`](@ref) if successful, CUOPT\\_ERROR otherwise
@@ -173,7 +175,7 @@ Create an optimization problem of the form *
 * `constraint_upper_bounds`:\\[in\\] - A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_constraints containing the upper bounds of the constraints.
 * `variable_lower_bounds`:\\[in\\] - A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_variables containing the lower bounds of the variables.
 * `variable_upper_bounds`:\\[in\\] - A pointer to an array of type [`cuopt_float_t`](@ref) of size num\\_variables containing the upper bounds of the variables.
-* `variable_types`:\\[in\\] - A pointer to an array of type char of size num\\_variables containing the types of the variables ([`CUOPT_CONTINUOUS`](@ref) or [`CUOPT_INTEGER`](@ref)).
+* `variable_types`:\\[in\\] - A pointer to an array of type char of size num\\_variables containing the types of the variables ([`CUOPT_CONTINUOUS`](@ref), [`CUOPT_INTEGER`](@ref), or [`CUOPT_SEMI_CONTINUOUS`](@ref)).
 * `problem_ptr`:\\[out\\] - A pointer to a [`cuOptOptimizationProblem`](@ref). On output the problem will be created and initialized with the provided data.
 # Returns
 A status code indicating success or failure.
@@ -186,6 +188,10 @@ end
     cuOptCreateQuadraticProblem(num_constraints, num_variables, objective_sense, objective_offset, objective_coefficients, quadratic_objective_matrix_row_offsets, quadratic_objective_matrix_column_indices, quadratic_objective_matrix_coefficent_values, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficent_values, constraint_sense, rhs, lower_bounds, upper_bounds, problem_ptr)
 
 Create an optimization problem of the form
+
+!!! note
+
+    **Deprecated:** Use `[`cuOptCreateProblem`](@ref)` to set up the linear problem, then `[`cuOptSetQuadraticObjective`](@ref)` to specify the quadratic objective terms.
 
 ```c++
                 minimize/maximize  c^T x + x^T Q x + offset
@@ -222,6 +228,10 @@ end
 
 Create an optimization problem of the form *
 
+!!! note
+
+    **Deprecated:** Use `[`cuOptCreateRangedProblem`](@ref)` to set up the linear problem, then `[`cuOptSetQuadraticObjective`](@ref)` to specify the quadratic objective terms. For QCQP models, use `[`cuOptAddQuadraticConstraint`](@ref)` for each quadratic constraint.
+
 ```c++
                 minimize/maximize  c^T x + x^T Q x + offset
                   subject to       bl <= A*x <= bu
@@ -250,6 +260,51 @@ A status code indicating success or failure.
 """
 function cuOptCreateQuadraticRangedProblem(num_constraints, num_variables, objective_sense, objective_offset, objective_coefficients, quadratic_objective_matrix_row_offsets, quadratic_objective_matrix_column_indices, quadratic_objective_matrix_coefficent_values, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficients, constraint_lower_bounds, constraint_upper_bounds, variable_lower_bounds, variable_upper_bounds, problem_ptr)
     ccall((:cuOptCreateQuadraticRangedProblem, libcuopt), cuopt_int_t, (cuopt_int_t, cuopt_int_t, cuopt_int_t, cuopt_float_t, Ptr{cuopt_float_t}, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{cuopt_float_t}, Ptr{cuOptOptimizationProblem}), num_constraints, num_variables, objective_sense, objective_offset, objective_coefficients, quadratic_objective_matrix_row_offsets, quadratic_objective_matrix_column_indices, quadratic_objective_matrix_coefficent_values, constraint_matrix_row_offsets, constraint_matrix_column_indices, constraint_matrix_coefficients, constraint_lower_bounds, constraint_upper_bounds, variable_lower_bounds, variable_upper_bounds, problem_ptr)
+end
+
+"""
+    cuOptSetQuadraticObjective(problem, num_entries, row_index, col_index, coeff)
+
+Set the quadratic objective term x^T Q x on an existing problem.
+
+The matrix Q is specified in coordinate (triplet) format. This function may be called after `[`cuOptCreateProblem`](@ref)` or `[`cuOptCreateRangedProblem`](@ref)` to build a QP or QCQP model without using `[`cuOptCreateQuadraticProblem`](@ref)` or `[`cuOptCreateQuadraticRangedProblem`](@ref)`. Each call replaces any previously set quadratic objective. Duplicate (row, col) indices in the triplet arrays are summed.
+
+# Arguments
+* `problem`:\\[in\\] The optimization problem created by `[`cuOptCreateProblem`](@ref)` or `[`cuOptCreateRangedProblem`](@ref)`.
+* `num_entries`:\\[in\\] Number of non-zero entries in Q.
+* `row_index`:\\[in\\] Array of length num\\_entries with row indices (0-based).
+* `col_index`:\\[in\\] Array of length num\\_entries with column indices (0-based).
+* `coeff`:\\[in\\] Array of length num\\_entries with matrix coefficients.
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptSetQuadraticObjective(problem, num_entries, row_index, col_index, coeff)
+    ccall((:cuOptSetQuadraticObjective, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, cuopt_int_t, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}), problem, num_entries, row_index, col_index, coeff)
+end
+
+"""
+    cuOptAddQuadraticConstraint(problem, quad_num_entries, row_index, col_index, coeff, num_lin_entries, linear_index, linear_coeff, sense, rhs)
+
+Add a quadratic constraint x^T Q x + d^T x {<=, >=} rhs to an existing problem.
+
+The quadratic matrix Q is specified in coordinate (triplet) format. The linear term d is specified by parallel arrays of variable indices and coefficients. This function may be called after `[`cuOptCreateProblem`](@ref)` or `[`cuOptCreateRangedProblem`](@ref)` to build a QCQP model. Each call appends one quadratic constraint.
+
+# Arguments
+* `problem`:\\[in\\] The optimization problem created by `[`cuOptCreateProblem`](@ref)` or `[`cuOptCreateRangedProblem`](@ref)`.
+* `quad_num_entries`:\\[in\\] Number of non-zero entries in the quadratic part.
+* `row_index`:\\[in\\] Array of length quad\\_num\\_entries with row indices (0-based).
+* `col_index`:\\[in\\] Array of length quad\\_num\\_entries with column indices (0-based).
+* `coeff`:\\[in\\] Array of length quad\\_num\\_entries with quadratic matrix coefficients.
+* `num_lin_entries`:\\[in\\] Number of non-zero entries in the linear part.
+* `linear_index`:\\[in\\] Array of length num\\_lin\\_entries with variable indices (0-based).
+* `linear_coeff`:\\[in\\] Array of length num\\_lin\\_entries with linear coefficients.
+* `sense`:\\[in\\] Constraint sense: `[`CUOPT_LESS_THAN`](@ref)` ('L') for <= or `[`CUOPT_GREATER_THAN`](@ref)` ('G') for >=.
+* `rhs`:\\[in\\] Right-hand side of the constraint.
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptAddQuadraticConstraint(problem, quad_num_entries, row_index, col_index, coeff, num_lin_entries, linear_index, linear_coeff, sense, rhs)
+    ccall((:cuOptAddQuadraticConstraint, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, cuopt_int_t, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}, cuopt_int_t, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}, Cchar, cuopt_float_t), problem, quad_num_entries, row_index, col_index, coeff, num_lin_entries, linear_index, linear_coeff, sense, rhs)
 end
 
 """
@@ -468,7 +523,7 @@ Get the variable types of an optimization problem.
 
 # Arguments
 * `problem`:\\[in\\] - The optimization problem.
-* `variable_types_ptr`:\\[out\\] - A pointer to an array of type char of size num\\_variables that on output will contain the types of the variables ([`CUOPT_CONTINUOUS`](@ref) or [`CUOPT_INTEGER`](@ref)).
+* `variable_types_ptr`:\\[out\\] - A pointer to an array of type char of size num\\_variables that on output will contain the types of the variables ([`CUOPT_CONTINUOUS`](@ref), [`CUOPT_INTEGER`](@ref), or [`CUOPT_SEMI_CONTINUOUS`](@ref)).
 # Returns
 A status code indicating success or failure.
 """
@@ -954,6 +1009,8 @@ const CUOPT_TIME_LIMIT = "time_limit"
 
 const CUOPT_WORK_LIMIT = "work_limit"
 
+const CUOPT_NODE_LIMIT = "node_limit"
+
 const CUOPT_PDLP_SOLVER_MODE = "pdlp_solver_mode"
 
 const CUOPT_METHOD = "method"
@@ -980,11 +1037,17 @@ const CUOPT_ORDERING = "ordering"
 
 const CUOPT_BARRIER_DUAL_INITIAL_POINT = "barrier_dual_initial_point"
 
+const CUOPT_BARRIER_ITERATIVE_REFINEMENT = "barrier_iterative_refinement"
+
+const CUOPT_BARRIER_STEP_SCALE = "barrier_step_scale"
+
 const CUOPT_ELIMINATE_DENSE_COLUMNS = "eliminate_dense_columns"
 
 const CUOPT_CUDSS_DETERMINISTIC = "cudss_deterministic"
 
 const CUOPT_PRESOLVE = "presolve"
+
+const CUOPT_MIP_PROBING = "mip_probing"
 
 const CUOPT_DUAL_POSTSOLVE = "dual_postsolve"
 
@@ -1006,6 +1069,8 @@ const CUOPT_MIP_SCALING = "mip_scaling"
 
 const CUOPT_MIP_PRESOLVE = "mip_presolve"
 
+const CUOPT_MIP_SYMMETRY = "mip_symmetry"
+
 const CUOPT_MIP_RELIABILITY_BRANCHING = "mip_reliability_branching"
 
 const CUOPT_MIP_CUT_PASSES = "mip_cut_passes"
@@ -1016,6 +1081,8 @@ const CUOPT_MIP_MIXED_INTEGER_GOMORY_CUTS = "mip_mixed_integer_gomory_cuts"
 
 const CUOPT_MIP_KNAPSACK_CUTS = "mip_knapsack_cuts"
 
+const CUOPT_MIP_FLOW_COVER_CUTS = "mip_flow_cover_cuts"
+
 const CUOPT_MIP_IMPLIED_BOUND_CUTS = "mip_implied_bound_cuts"
 
 const CUOPT_MIP_CLIQUE_CUTS = "mip_clique_cuts"
@@ -1023,6 +1090,8 @@ const CUOPT_MIP_CLIQUE_CUTS = "mip_clique_cuts"
 const CUOPT_MIP_STRONG_CHVATAL_GOMORY_CUTS = "mip_strong_chvatal_gomory_cuts"
 
 const CUOPT_MIP_REDUCED_COST_STRENGTHENING = "mip_reduced_cost_strengthening"
+
+const CUOPT_MIP_OBJECTIVE_STEP = "mip_objective_step"
 
 const CUOPT_MIP_CUT_CHANGE_THRESHOLD = "mip_cut_change_threshold"
 
@@ -1047,6 +1116,8 @@ const CUOPT_PRESOLVE_FILE = "presolve_file"
 const CUOPT_RANDOM_SEED = "random_seed"
 
 const CUOPT_PDLP_PRECISION = "pdlp_precision"
+
+const CUOPT_MIP_SEMICONTINUOUS_BIG_M = "mip_semi_continuous_big_m"
 
 const CUOPT_MIP_HYPER_HEURISTIC_POPULATION_SIZE = "mip_hyper_heuristic_population_size"
 
@@ -1110,8 +1181,6 @@ const CUOPT_TERMINATION_STATUS_WORK_LIMIT = 10
 
 const CUOPT_TERMINATION_STATUS_UNBOUNDED_OR_INFEASIBLE = 11
 
-const CUOPT_TERIMINATION_STATUS_WORK_LIMIT = 10
-
 const CUOPT_MINIMIZE = 1
 
 const CUOPT_MAXIMIZE = -1
@@ -1125,6 +1194,8 @@ const CUOPT_EQUAL = Cchar('E')
 const CUOPT_CONTINUOUS = Cchar('C')
 
 const CUOPT_INTEGER = Cchar('I')
+
+const CUOPT_SEMI_CONTINUOUS = Cchar('S')
 
 const CUOPT_INFINITY = INFINITY
 
@@ -1185,3 +1256,7 @@ const CUOPT_MIP_SCALING_OFF = 0
 const CUOPT_MIP_SCALING_ON = 1
 
 const CUOPT_MIP_SCALING_NO_OBJECTIVE = 2
+
+const CUOPT_BARRIER_ITERATIVE_REFINEMENT_OFF = 0
+
+const CUOPT_BARRIER_ITERATIVE_REFINEMENT_ON = 1

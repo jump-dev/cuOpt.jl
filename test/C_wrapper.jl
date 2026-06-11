@@ -107,16 +107,19 @@ function test_Direct_C_call()
     return
 end
 
-function test_QuadraticProblem_C_call()
+# minimize x² + y² s.t. x + y ≥ 1, 0 ≤ x,y ≤ 10. Optimum at x = y = 0.5, obj = 0.5.
+function test_QuadraticObjective_C_call()
     n_col = Cint(2)
     n_row = Cint(1)
 
     colcost = Cdouble[0.0, 0.0]
     collower = Cdouble[0.0, 0.0]
     colupper = Cdouble[10.0, 10.0]
+    coltype = Cchar[cuOpt.CUOPT_CONTINUOUS, cuOpt.CUOPT_CONTINUOUS]
 
-    q_row_offsets = Cint[0, 1, 2]
-    q_col_indices = Cint[0, 1]
+    # Q = diag(1, 1) in triplet (COO) form
+    q_rows = Cint[0, 1]
+    q_cols = Cint[0, 1]
     q_values = Cdouble[1.0, 1.0]
 
     a_row_offsets = Cint[0, 2]
@@ -129,15 +132,12 @@ function test_QuadraticProblem_C_call()
     objective_sense = Int32(cuOpt.CUOPT_MINIMIZE)
     problem_ref = Ref{cuOpt.cuOptOptimizationProblem}()
 
-    ret = cuOpt.cuOptCreateQuadraticProblem(
+    ret = cuOpt.cuOptCreateProblem(
         n_row,
         n_col,
         objective_sense,
         0.0,
         colcost,
-        q_row_offsets,
-        q_col_indices,
-        q_values,
         a_row_offsets,
         a_col_indices,
         a_values,
@@ -145,10 +145,20 @@ function test_QuadraticProblem_C_call()
         rhs,
         collower,
         colupper,
+        coltype,
         problem_ref,
     )
     @test ret == 0
     problem = problem_ref[]
+
+    ret = cuOpt.cuOptSetQuadraticObjective(
+        problem,
+        Cint(length(q_values)),
+        q_rows,
+        q_cols,
+        q_values,
+    )
+    @test ret == 0
 
     settings_ref = Ref{cuOpt.cuOptSolverSettings}()
     ret = cuOpt.cuOptCreateSolverSettings(settings_ref)
@@ -176,16 +186,18 @@ function test_QuadraticProblem_C_call()
     return
 end
 
-function test_QuadraticRangedProblem_C_call()
+# Same QP as above expressed with a ranged constraint 1 ≤ x + y ≤ 10.
+function test_QuadraticObjective_Ranged_C_call()
     n_col = Cint(2)
     n_row = Cint(1)
 
     colcost = Cdouble[0.0, 0.0]
     collower = Cdouble[0.0, 0.0]
     colupper = Cdouble[10.0, 10.0]
+    coltype = Cchar[cuOpt.CUOPT_CONTINUOUS, cuOpt.CUOPT_CONTINUOUS]
 
-    q_row_offsets = Cint[0, 1, 2]
-    q_col_indices = Cint[0, 1]
+    q_rows = Cint[0, 1]
+    q_cols = Cint[0, 1]
     q_values = Cdouble[1.0, 1.0]
 
     a_row_offsets = Cint[0, 2]
@@ -198,15 +210,12 @@ function test_QuadraticRangedProblem_C_call()
     objective_sense = Int32(cuOpt.CUOPT_MINIMIZE)
     problem_ref = Ref{cuOpt.cuOptOptimizationProblem}()
 
-    ret = cuOpt.cuOptCreateQuadraticRangedProblem(
+    ret = cuOpt.cuOptCreateRangedProblem(
         n_row,
         n_col,
         objective_sense,
         0.0,
         colcost,
-        q_row_offsets,
-        q_col_indices,
-        q_values,
         a_row_offsets,
         a_col_indices,
         a_values,
@@ -214,10 +223,20 @@ function test_QuadraticRangedProblem_C_call()
         constraint_upper,
         collower,
         colupper,
+        coltype,
         problem_ref,
     )
     @test ret == 0
     problem = problem_ref[]
+
+    ret = cuOpt.cuOptSetQuadraticObjective(
+        problem,
+        Cint(length(q_values)),
+        q_rows,
+        q_cols,
+        q_values,
+    )
+    @test ret == 0
 
     settings_ref = Ref{cuOpt.cuOptSolverSettings}()
     ret = cuOpt.cuOptCreateSolverSettings(settings_ref)

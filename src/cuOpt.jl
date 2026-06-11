@@ -46,7 +46,7 @@ function __init__()
         error("Failed to get cuOpt library version (status code: $status)")
     end
     version = VersionNumber(major[], minor[], patch[])
-    min, max = v"26.04", v"26.05"
+    min, max = v"26.06", v"26.07"
     if !(min <= version < max)
         error(
             "Incompatible cuOpt library version. Got $version, but supported versions are [$min, $max)",
