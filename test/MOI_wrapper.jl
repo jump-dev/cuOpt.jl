@@ -55,7 +55,9 @@ function test_runtests_cache_optimizer()
                 MOI.ConstraintBasisStatus,
             ],
         );
-        exclude = [],
+        # cuOpt's QP solver assumes convexity, so nonconvex QCQP problems are
+        # out of scope.
+        exclude = ["test_quadratic_nonconvex_constraint_integration"],
     )
     return
 end
@@ -70,6 +72,54 @@ function test_air05()
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
     @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 26374.0; rtol = 1e-4)
+    return
+end
+
+# Exercise the SOC and RSOC conic conformance tests through MOI's bridge layer.
+# With with_bridge_type, MOI.Bridges.full_bridge_optimizer picks up the
+# SOCtoNonConvexQuadBridge / RSOCtoNonConvexQuadBridge bridges that the
+# wrapper declares via ListOfNonstandardBridges. Both cones lower to
+# ScalarQuadraticFunction-in-LessThan (plus an explicit t >= 0 row from the
+# bridge) before reaching cuOpt, which detects the SOC structure in the
+# quadratic form.
+function test_runtests_bridge_optimizer()
+    model = MOI.instantiate(
+        cuOpt.Optimizer;
+        with_cache_type = Float64,
+        with_bridge_type = Float64,
+    )
+    MOI.Test.runtests(
+        model,
+        MOI.Test.Config(;
+            atol = 1e-3,
+            rtol = 1e-3,
+            exclude = Any[
+                MOI.DualObjectiveValue,
+                MOI.ConstraintPrimal,
+                MOI.ConstraintDual,
+                MOI.ConstraintBasisStatus,
+            ],
+        );
+        # cuOpt's QP solver assumes convexity, so nonconvex QCQP problems are
+        # out of scope.
+        # Known cuOpt limitation: the barrier QCQP solver does not certify
+        # primal-infeasibility or dual-infeasibility (unboundedness). It
+        # returns INFEASIBLE_OR_UNBOUNDED (or NUMERICAL_ERROR in degenerate
+        # cases) where MOI tests assert INFEASIBLE / DUAL_INFEASIBLE.
+        # The following tests exercise this discrimination and stay excluded
+        # until the cuOpt-side issue is resolved.
+        exclude = [
+            "test_quadratic_nonconvex_constraint_integration",
+            r"^test_conic_RotatedSecondOrderCone_INFEASIBLE$",
+            "test_conic_SecondOrderCone_no_initial_bound",
+            "test_conic_SecondOrderCone_negative_post_bound_2",
+            "test_conic_SecondOrderCone_negative_post_bound_3",
+        ],
+        include = [
+            "test_conic_SecondOrderCone",
+            "test_conic_RotatedSecondOrderCone",
+        ],
+    )
     return
 end
 
