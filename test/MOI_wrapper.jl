@@ -108,10 +108,17 @@ function test_runtests_bridge_optimizer()
         # cases) where MOI tests assert INFEASIBLE / DUAL_INFEASIBLE.
         # The following tests exercise this discrimination and stay excluded
         # until the cuOpt-side issue is resolved.
+        #
+        # The four SOC tests below all call MOI.delete on a bridged SOC
+        # constraint. The SOCtoNonConvexQuadBridge cleanup triggers
+        # call_in_context in MOI's variable bridge map, which crashes Julia's
+        # JIT compiler (SIGSEGV in jl_type_infer) on Julia 1.12.x. Tracked
+        # in https://github.com/NVIDIA/cuopt/issues/1485.
         exclude = [
             "test_quadratic_nonconvex_constraint_integration",
             r"^test_conic_RotatedSecondOrderCone_INFEASIBLE$",
             "test_conic_SecondOrderCone_no_initial_bound",
+            "test_conic_SecondOrderCone_negative_initial_bound",
             "test_conic_SecondOrderCone_negative_post_bound_2",
             "test_conic_SecondOrderCone_negative_post_bound_3",
         ],
