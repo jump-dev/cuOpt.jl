@@ -11,14 +11,14 @@ Set the environment variable `CUOPT_INCLUDE_PATH` to the path of the cuOpt inclu
 You can search for the include path using the following command:
 
 ```bash
-find / -path "*/cuopt/linear_programming/cuopt_c.h"
+find / -path "*/cuopt/mathematical_optimization/cuopt_c.h"
 ```
 
 ```bash
 export CUOPT_INCLUDE_PATH=/path/to/cuopt/include
 ```
 
-If the file path is something like this, ``/home/cuopt/.local/lib/python3.12/site-packages/libcuopt/include/cuopt/linear_programming/cuopt_c.h``, the path you would be setting is as followsm
+If the file path is something like this, ``/home/cuopt/.local/lib/python3.12/site-packages/libcuopt/include/cuopt/mathematical_optimization/cuopt_c.h``, the path you would be setting is as follows:
 
 
 ```bash
