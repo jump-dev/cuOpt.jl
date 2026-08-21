@@ -1309,7 +1309,9 @@ function MOI.optimize!(model::Optimizer)
     is_mip = Ref{Int32}()
     ret = cuOptIsMIP(model.cuopt_problem, is_mip)
     _check_ret(ret, "cuOptIsMIP")
-    if is_mip[] == 0
+    # TODO: Retrieve duals for quadratic constraints once
+    # https://github.com/NVIDIA/cuopt/issues/1751 is fixed.
+    if is_mip[] == 0 && isempty(model.quadratic_constraint_info)
         ret = cuOptGetDualSolution(model.cuopt_solution, model.dual_solution)
         _check_ret(ret, "cuOptGetDualSolution")
     end
