@@ -412,7 +412,11 @@ end
 """
     cuOptGetConstraintMatrix(problem, constraint_matrix_row_offsets_ptr, constraint_matrix_column_indices_ptr, constraint_matrix_coefficients_ptr)
 
-Get the constraint matrix of an optimization problem in compressed sparse row format.
+Get the linear constraint matrix of an optimization problem in compressed sparse row format. This is the matrix of the linear constraints only.
+
+!!! note
+
+    **Deprecated:** Use `[`cuOptGetConstraintMatrixCSR`](@ref)`.
 
 # Arguments
 * `problem`:\\[in\\] - The optimization problem.
@@ -424,6 +428,40 @@ A status code indicating success or failure.
 """
 function cuOptGetConstraintMatrix(problem, constraint_matrix_row_offsets_ptr, constraint_matrix_column_indices_ptr, constraint_matrix_coefficients_ptr)
     ccall((:cuOptGetConstraintMatrix, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}), problem, constraint_matrix_row_offsets_ptr, constraint_matrix_column_indices_ptr, constraint_matrix_coefficients_ptr)
+end
+
+"""
+    cuOptGetConstraintMatrixCSR(problem, constraint_matrix_row_offsets_ptr, constraint_matrix_column_indices_ptr, constraint_matrix_coefficients_ptr)
+
+Get the linear constraint matrix of an optimization problem in compressed sparse row format. This is the matrix of the linear constraints only.
+
+# Arguments
+* `problem`:\\[in\\] - The optimization problem.
+* `constraint_matrix_row_offsets_ptr`:\\[out\\] - A pointer to an array of type [`cuopt_int_t`](@ref) of size num\\_constraints + 1 that on output will contain the row offsets of the constraint matrix.
+* `constraint_matrix_column_indices_ptr`:\\[out\\] - A pointer to an array of type [`cuopt_int_t`](@ref) of size equal to the number of nonzeros that on output will contain the column indices of the non-zero entries of the constraint matrix.
+* `constraint_matrix_coefficients_ptr`:\\[out\\] - A pointer to an array of type [`cuopt_float_t`](@ref) of size equal to the number of nonzeros that on output will contain the coefficients of the non-zero entries of the constraint matrix.
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptGetConstraintMatrixCSR(problem, constraint_matrix_row_offsets_ptr, constraint_matrix_column_indices_ptr, constraint_matrix_coefficients_ptr)
+    ccall((:cuOptGetConstraintMatrixCSR, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}), problem, constraint_matrix_row_offsets_ptr, constraint_matrix_column_indices_ptr, constraint_matrix_coefficients_ptr)
+end
+
+"""
+    cuOptGetConstraintMatrixCSC(problem, constraint_matrix_column_offsets_ptr, constraint_matrix_row_indices_ptr, constraint_matrix_coefficients_ptr)
+
+Get the linear constraint matrix of an optimization problem in compressed sparse column format. This is the matrix of the linear constraints only.
+
+# Arguments
+* `problem`:\\[in\\] - The optimization problem.
+* `constraint_matrix_column_offsets_ptr`:\\[out\\] - A pointer to an array of type [`cuopt_int_t`](@ref) of size num\\_variables + 1 (see [`cuOptGetProblemIntAttribute`](@ref)) that on output will contain the column offsets of the constraint matrix.
+* `constraint_matrix_row_indices_ptr`:\\[out\\] - A pointer to an array of type [`cuopt_int_t`](@ref) of size equal to the number of nonzeros (see [`cuOptGetNumNonZeros`](@ref)) that on output will contain the row indices of the non-zero entries of the constraint matrix.
+* `constraint_matrix_coefficients_ptr`:\\[out\\] - A pointer to an array of type [`cuopt_float_t`](@ref) of size equal to the number of nonzeros that on output will contain the coefficients of the non-zero entries of the constraint matrix.
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptGetConstraintMatrixCSC(problem, constraint_matrix_column_offsets_ptr, constraint_matrix_row_indices_ptr, constraint_matrix_coefficients_ptr)
+    ccall((:cuOptGetConstraintMatrixCSC, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, Ptr{cuopt_int_t}, Ptr{cuopt_int_t}, Ptr{cuopt_float_t}), problem, constraint_matrix_column_offsets_ptr, constraint_matrix_row_indices_ptr, constraint_matrix_coefficients_ptr)
 end
 
 """
@@ -850,7 +888,7 @@ Get the termination reason of an optimization problem.
 
 # Arguments
 * `solution`:\\[in\\] - The solution object.
-* `termination_reason_ptr`:\\[out\\] - A pointer to a [`cuopt_int_t`](@ref) that on output will contain the termination reason.
+* `termination_status_ptr`:\\[out\\] - A pointer to a [`cuopt_int_t`](@ref) that on output will contain the termination status.
 # Returns
 A status code indicating success or failure.
 """
@@ -975,6 +1013,51 @@ function cuOptGetReducedCosts(solution, reduced_cost_ptr)
     ccall((:cuOptGetReducedCosts, libcuopt), cuopt_int_t, (cuOptSolution, Ptr{cuopt_float_t}), solution, reduced_cost_ptr)
 end
 
+"""
+    cuOptGetProblemIntAttribute(problem, attribute, value_out)
+
+Get a scalar integer problem attribute (a CUOPT\\_ATTR\\_* with an integer value).
+"""
+function cuOptGetProblemIntAttribute(problem, attribute, value_out)
+    ccall((:cuOptGetProblemIntAttribute, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, cuopt_int_t, Ptr{cuopt_int_t}), problem, attribute, value_out)
+end
+
+"""
+    cuOptGetProblemFloatAttribute(problem, attribute, value_out)
+
+Get a scalar floating-point problem attribute (objective offset / scaling factor).
+"""
+function cuOptGetProblemFloatAttribute(problem, attribute, value_out)
+    ccall((:cuOptGetProblemFloatAttribute, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, cuopt_int_t, Ptr{cuopt_float_t}), problem, attribute, value_out)
+end
+
+"""
+    cuOptGetProblemFloatArrayAttribute(problem, attribute, out, count)
+
+Copy a floating-point array attribute into out. count must equal num\\_variables for variable-indexed attributes or num\\_constraints for constraint-indexed attributes (see [`cuOptGetProblemIntAttribute`](@ref)).
+"""
+function cuOptGetProblemFloatArrayAttribute(problem, attribute, out, count)
+    ccall((:cuOptGetProblemFloatArrayAttribute, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, cuopt_int_t, Ptr{cuopt_float_t}, cuopt_int_t), problem, attribute, out, count)
+end
+
+"""
+    cuOptGetProblemCharArrayAttribute(problem, attribute, out, count)
+
+Copy a char array attribute (constraint sense or variable types) into out. count must equal num\\_constraints (constraint sense) or num\\_variables (variable types) (see [`cuOptGetProblemIntAttribute`](@ref)).
+"""
+function cuOptGetProblemCharArrayAttribute(problem, attribute, out, count)
+    ccall((:cuOptGetProblemCharArrayAttribute, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, cuopt_int_t, Ptr{Cchar}, cuopt_int_t), problem, attribute, out, count)
+end
+
+"""
+    cuOptGetProblemStringArrayAttribute(problem, attribute, strings_out, count)
+
+Fill a caller-provided array of `count` pointers with borrowed pointers to cuOpt-owned strings ([`CUOPT_STRING_ARRAY_VARIABLE_NAMES`](@ref) or \\_ROW\\_NAMES). count must equal num\\_variables or num\\_constraints respectively. The returned pointers are valid until the problem is modified or destroyed; do not free them.
+"""
+function cuOptGetProblemStringArrayAttribute(problem, attribute, strings_out, count)
+    ccall((:cuOptGetProblemStringArrayAttribute, libcuopt), cuopt_int_t, (cuOptOptimizationProblem, cuopt_int_t, Ptr{Ptr{Cchar}}, cuopt_int_t), problem, attribute, strings_out, count)
+end
+
 const CUOPT_INSTANTIATE_FLOAT = 0
 
 const CUOPT_INSTANTIATE_DOUBLE = 1
@@ -1037,6 +1120,8 @@ const CUOPT_ORDERING = "ordering"
 
 const CUOPT_BARRIER_DUAL_INITIAL_POINT = "barrier_dual_initial_point"
 
+const CUOPT_POSTSOLVE_INFO = "postsolve_info"
+
 const CUOPT_BARRIER_ITERATIVE_REFINEMENT = "barrier_iterative_refinement"
 
 const CUOPT_BARRIER_STEP_SCALE = "barrier_step_scale"
@@ -1087,9 +1172,13 @@ const CUOPT_MIP_IMPLIED_BOUND_CUTS = "mip_implied_bound_cuts"
 
 const CUOPT_MIP_CLIQUE_CUTS = "mip_clique_cuts"
 
+const CUOPT_MIP_ZERO_HALF_CUTS = "mip_zero_half_cuts"
+
 const CUOPT_MIP_STRONG_CHVATAL_GOMORY_CUTS = "mip_strong_chvatal_gomory_cuts"
 
 const CUOPT_MIP_REDUCED_COST_STRENGTHENING = "mip_reduced_cost_strengthening"
+
+const CUOPT_MIP_RINS = "mip_rins"
 
 const CUOPT_MIP_OBJECTIVE_STEP = "mip_objective_step"
 
@@ -1108,6 +1197,10 @@ const CUOPT_SOLUTION_FILE = "solution_file"
 const CUOPT_NUM_CPU_THREADS = "num_cpu_threads"
 
 const CUOPT_NUM_GPUS = "num_gpus"
+
+const CUOPT_DISTRIBUTED_PDLP_PARTITIONER = "distributed_pdlp_partitioner"
+
+const CUOPT_USE_DISTRIBUTED_PDLP = "use_distributed_pdlp"
 
 const CUOPT_USER_PROBLEM_FILE = "user_problem_file"
 
@@ -1152,6 +1245,46 @@ const CUOPT_MIP_HYPER_HEURISTIC_CYCLE_DETECTION_LENGTH = "mip_hyper_heuristic_cy
 const CUOPT_MIP_HYPER_HEURISTIC_RELAXED_LP_TIME_LIMIT = "mip_hyper_heuristic_relaxed_lp_time_limit"
 
 const CUOPT_MIP_HYPER_HEURISTIC_RELATED_VARS_TIME_LIMIT = "mip_hyper_heuristic_related_vars_time_limit"
+
+const CUOPT_MIP_HYPER_DIVING_LINE_SEARCH = "mip_hyper_diving_line_search"
+
+const CUOPT_MIP_HYPER_DIVING_PSEUDOCOST = "mip_hyper_diving_pseudocost"
+
+const CUOPT_MIP_HYPER_DIVING_GUIDED = "mip_hyper_diving_guided"
+
+const CUOPT_MIP_HYPER_DIVING_COEFFICIENT = "mip_hyper_diving_coefficient"
+
+const CUOPT_MIP_HYPER_DIVING_FARKAS = "mip_hyper_diving_farkas"
+
+const CUOPT_MIP_HYPER_DIVING_VECTOR_LENGTH = "mip_hyper_diving_vector_length"
+
+const CUOPT_MIP_HYPER_DIVING_MIN_NODE_DEPTH = "mip_hyper_diving_min_node_depth"
+
+const CUOPT_MIP_HYPER_DIVING_NODE_LIMIT = "mip_hyper_diving_node_limit"
+
+const CUOPT_MIP_HYPER_DIVING_ITERATION_LIMIT_FACTOR = "mip_hyper_diving_iteration_limit_factor"
+
+const CUOPT_MIP_HYPER_DIVING_BACKTRACK_LIMIT = "mip_hyper_diving_backtrack_limit"
+
+const CUOPT_MIP_HYPER_DIVING_SHOW_TYPE = "mip_hyper_diving_show_type"
+
+const CUOPT_MIP_HYPER_SUBMIP_BASE_TARGET_FIXRATE = "mip_hyper_submip_base_target_fixrate"
+
+const CUOPT_MIP_HYPER_SUBMIP_MIN_FIXRATE = "mip_hyper_submip_min_fixrate"
+
+const CUOPT_MIP_HYPER_SUBMIP_MIN_FIXRATE_CAP = "mip_hyper_submip_min_fixrate_cap"
+
+const CUOPT_MIP_HYPER_SUBMIP_TARGET_MIP_GAP = "mip_hyper_submip_target_mip_gap"
+
+const CUOPT_MIP_HYPER_SUBMIP_NODE_LIMIT_BASE = "mip_hyper_submip_node_limit_base"
+
+const CUOPT_MIP_HYPER_SUBMIP_MAX_LEVEL = "mip_hyper_submip_max_level"
+
+const CUOPT_MIP_HYPER_SUBMIP_ITERATION_LIMIT_RATIO = "mip_hyper_submip_iteration_limit_ratio"
+
+const CUOPT_MIP_HYPER_SUBMIP_ENABLE_CPUFJ = "mip_hyper_submip_enable_cpufj"
+
+const CUOPT_QCQP_HYPER_RUIZ_EQUILIBRATION = "qcqp_hyper_ruiz_equilibration"
 
 const CUOPT_MODE_OPPORTUNISTIC = 0
 
@@ -1251,6 +1384,12 @@ const CUOPT_PRESOLVE_PAPILO = 1
 
 const CUOPT_PRESOLVE_PSLP = 2
 
+const CUOPT_DISTRIBUTED_PDLP_PARTITIONER_AUTO = 0
+
+const CUOPT_DISTRIBUTED_PDLP_PARTITIONER_KAMINPAR = 1
+
+const CUOPT_DISTRIBUTED_PDLP_PARTITIONER_ROUND_ROBIN = 2
+
 const CUOPT_MIP_SCALING_OFF = 0
 
 const CUOPT_MIP_SCALING_ON = 1
@@ -1260,3 +1399,45 @@ const CUOPT_MIP_SCALING_NO_OBJECTIVE = 2
 const CUOPT_BARRIER_ITERATIVE_REFINEMENT_OFF = 0
 
 const CUOPT_BARRIER_ITERATIVE_REFINEMENT_ON = 1
+
+const CUOPT_ATTR_NUM_VARIABLES = 0
+
+const CUOPT_ATTR_NUM_CONSTRAINTS = 1
+
+const CUOPT_ATTR_NUM_NONZEROS = 2
+
+const CUOPT_ATTR_NUM_INTEGERS = 3
+
+const CUOPT_ATTR_OBJECTIVE_SENSE = 4
+
+const CUOPT_ATTR_OBJECTIVE_OFFSET = 5
+
+const CUOPT_ATTR_OBJECTIVE_SCALING_FACTOR = 6
+
+const CUOPT_ATTR_PROBLEM_CATEGORY = 7
+
+const CUOPT_ATTR_IS_MIP = 8
+
+const CUOPT_ATTR_HAS_QUADRATIC_OBJECTIVE = 9
+
+const CUOPT_ATTR_HAS_QUADRATIC_CONSTRAINTS = 10
+
+const CUOPT_ARRAY_ATTR_OBJECTIVE_COEFFICIENTS = 100
+
+const CUOPT_ARRAY_ATTR_VARIABLE_LOWER_BOUNDS = 101
+
+const CUOPT_ARRAY_ATTR_VARIABLE_UPPER_BOUNDS = 102
+
+const CUOPT_ARRAY_ATTR_CONSTRAINT_LOWER_BOUNDS = 103
+
+const CUOPT_ARRAY_ATTR_CONSTRAINT_UPPER_BOUNDS = 104
+
+const CUOPT_ARRAY_ATTR_CONSTRAINT_RHS = 105
+
+const CUOPT_ARRAY_ATTR_CONSTRAINT_SENSE = 106
+
+const CUOPT_ARRAY_ATTR_VARIABLE_TYPES = 107
+
+const CUOPT_STRING_ARRAY_VARIABLE_NAMES = 200
+
+const CUOPT_STRING_ARRAY_ROW_NAMES = 201
