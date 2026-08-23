@@ -16,7 +16,7 @@
 using Clang.Generators
 
 cuopt_include = get(ENV, "CUOPT_INCLUDE_PATH", "")
-c_api = joinpath(cuopt_include, "cuopt/linear_programming/cuopt_c.h")
+c_api = joinpath(cuopt_include, "cuopt/mathematical_optimization/cuopt_c.h")
 
 build!(
     create_context(
