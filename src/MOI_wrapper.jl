@@ -190,6 +190,12 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 
     obj_value::Float64
     termination_status::Int32
+    # Set to `true` in `copy_to` whenever a quadratic objective is present.
+    # cuOpt does not return duals for problems with a quadratic objective or
+    # quadratic constraints (which also covers SecondOrderCone, since it is
+    # bridged to a ScalarQuadraticFunction constraint, see
+    # `MOI.Bridges.ListOfNonstandardBridges`).
+    has_quadratic_objective::Bool
     function Optimizer()
         model = new()
         model.cuopt_problem = cuOptOptimizationProblem(C_NULL)
@@ -211,6 +217,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         model.dual_solution = Float64[]
         model.obj_value = 0.0
         model.termination_status = CUOPT_TERMINATION_STATUS_NO_TERMINATION
+        model.has_quadratic_objective = false
         return model
     end
 end
@@ -614,6 +621,7 @@ function MOI.empty!(model::Optimizer)
     model.dual_solution = Float64[]
     model.obj_value = NaN
     model.termination_status = CUOPT_TERMINATION_STATUS_NO_TERMINATION
+    model.has_quadratic_objective = false
 
     if model.cuopt_problem != C_NULL
         a = Ref(model.cuopt_problem)
@@ -1222,6 +1230,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
             "cuOpt does not support models with quadratic objectives and integer or semi-continuous variables",
         )
     end
+    dest.has_quadratic_objective = has_quadratic_objective
 
     ref_problem = Ref{cuOptOptimizationProblem}()
     ret = cuOptCreateRangedProblem(
@@ -1284,6 +1293,20 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
     return mapping
 end
 
+# Termination statuses for which cuOpt does not populate a primal
+# solution buffer, either because the problem was declared
+# infeasible/unbounded (frequently determined at presolve, before any
+# solution buffer is even allocated) or because the solve never actually
+# ran. Calling `cuOptGetPrimalSolution` for these statuses returns
+# `CUOPT_INVALID_ARGUMENT`, so we must skip the call rather than let
+# `_check_ret` throw.
+const _NO_PRIMAL_SOLUTION_STATUSES = (
+    CUOPT_TERMINATION_STATUS_NO_TERMINATION,
+    CUOPT_TERMINATION_STATUS_INFEASIBLE,
+    CUOPT_TERMINATION_STATUS_UNBOUNDED,
+    CUOPT_TERMINATION_STATUS_UNBOUNDED_OR_INFEASIBLE,
+)
+
 function MOI.optimize!(model::Optimizer)
     ref_solution = Ref{cuOptSolution}()
     ret = cuOptSolve(model.cuopt_problem, model.cuopt_settings, ref_solution)
@@ -1303,15 +1326,33 @@ function MOI.optimize!(model::Optimizer)
     model.primal_solution = zeros(_numcols(model))
     model.dual_solution = zeros(_numrows(model))
 
-    ret = cuOptGetPrimalSolution(model.cuopt_solution, model.primal_solution)
-    _check_ret(ret, "cuOptGetPrimalSolution")
+    # Skip fetching the primal solution when cuOpt is not guaranteed to have
+    # populated a solution buffer (e.g. infeasible/unbounded problems, often
+    # determined at presolve). `MOI.PrimalStatus`/`MOI.ResultCount` already
+    # report `NO_SOLUTION`/`0` for these statuses, so `model.primal_solution`
+    # is left as zeros and simply never read by a conforming MOI caller.
+    if !(model.termination_status in _NO_PRIMAL_SOLUTION_STATUSES)
+        ret =
+            cuOptGetPrimalSolution(model.cuopt_solution, model.primal_solution)
+        _check_ret(ret, "cuOptGetPrimalSolution")
+    end
 
     is_mip = Ref{Int32}()
     ret = cuOptIsMIP(model.cuopt_problem, is_mip)
     _check_ret(ret, "cuOptIsMIP")
+    # cuOpt does not return duals for MIPs, for problems with a quadratic
+    # objective, or for problems with quadratic constraints (which also
+    # covers SecondOrderCone, bridged to a quadratic constraint -- see
+    # `MOI.Bridges.ListOfNonstandardBridges`). See the C API docs: "Dual
+    # variables for problems with quadratic constraints not returned."
     # TODO: Retrieve duals for quadratic constraints once
     # https://github.com/NVIDIA/cuopt/issues/1751 is fixed.
-    if is_mip[] == 0 && isempty(model.quadratic_constraint_info)
+    has_dual_solution =
+        is_mip[] == 0 &&
+        !model.has_quadratic_objective &&
+        isempty(model.quadratic_constraint_info) &&
+        !(model.termination_status in _NO_PRIMAL_SOLUTION_STATUSES)
+    if has_dual_solution
         ret = cuOptGetDualSolution(model.cuopt_solution, model.dual_solution)
         _check_ret(ret, "cuOptGetDualSolution")
     end
