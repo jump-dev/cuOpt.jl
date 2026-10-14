@@ -2,11 +2,12 @@
 
 This document describes how to generate the C wrapper for cuOpt, which is for active development.
 
-Please refer to the [main README.md](../README.md#install-nvidia-cuopt) for more information on how to install NVIDIA cuOpt.
+Please refer to the [main README.md](../README.md#installation) for more information on how to install NVIDIA cuOpt.
 
 ## Building the C wrapper
 
-Set the environment variable `CUOPT_INCLUDE_PATH` to the path of the cuOpt include directory.
+Set the environment variable `CUOPT_INCLUDE_PATH` to the path of the cuOpt 26.10
+include directory.
 
 You can search for the include path using the following command:
 
@@ -18,11 +19,12 @@ find / -path "*/cuopt/mathematical_optimization/cuopt_c.h"
 export CUOPT_INCLUDE_PATH=/path/to/cuopt/include
 ```
 
-If the file path is something like this, ``/home/cuopt/.local/lib/python3.12/site-packages/libcuopt/include/cuopt/mathematical_optimization/cuopt_c.h``, the path you would be setting is as follows:
-
+For a cuOpt source checkout, use its `cpp/include` directory, which contains
+the C API header and the shared `constants.h`, `status_codes.h`, and `export.hpp`
+headers:
 
 ```bash
-export CUOPT_INCLUDE_PATH=/home/cuopt/.local/lib/python3.12/site-packages/libcuopt/include/
+export CUOPT_INCLUDE_PATH=/path/to/cuopt/cpp/include
 ```
 
 Run the following command to generate the C wrapper for cuOpt:

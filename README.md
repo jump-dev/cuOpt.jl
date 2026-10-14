@@ -32,11 +32,12 @@ To use cuOpt.jl, you must first separately install cuOpt.
 
 **Installing cuOpt requires Linux.**
 
-Note: This version of cuOpt.jl supports the Nvidia cuOpt 26.08 release.
+Note: This version of cuOpt.jl supports only the NVIDIA cuOpt 26.10 release.
 
 Please refer to the [NVIDIA cuOpt documentation](https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-c/quick-start.html#installation) for installation instructions.
 
-Please ensure the library path for `libcuopt.so` is added to `LD_LIBRARY_PATH`.
+Please ensure the library path for `libcuopt_mathopt.so` is added to
+`LD_LIBRARY_PATH`.
 
 Once cuOpt is installed, add cuOpt.jl as follows:
 ```julia
@@ -48,9 +49,9 @@ Pkg.add("cuOpt")
 
 To install cuOpt on [Google Colab](https://colab.research.google.com), do:
 ```julia
-julia> cmd = run(`pip install --extra-index-url=https://pypi.nvidia.com libcuopt-cu12==26.8.\* nvidia-cuda-runtime-cu12==12.8.\*`);
+julia> cmd = run(`pip install --extra-index-url=https://pypi.nvidia.com libcuopt-mathopt-cu12==26.10.\* nvidia-cuda-runtime-cu12==12.8.\*`);
 
-julia> push!(Base.DL_LOAD_PATH, "/usr/local/lib/python3.12/dist-packages/libcuopt/lib64")
+julia> push!(Base.DL_LOAD_PATH, "/usr/local/lib/python3.12/dist-packages/libcuopt_mathopt/lib64")
 ```
 
 ## Use with JuMP
