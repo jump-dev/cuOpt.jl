@@ -29,7 +29,12 @@ function __init__()
     if get(ENV, "JULIA_REGISTRYCI_AUTOMERGE", "false") == "true"
         return  # Skip. The package won't work, but it can be loaded.
     end
-    libname = Libdl.find_library("libcuopt")
+    # From cuOpt 26.10, `libcuopt_mathopt` has the C API and `libcuopt.so` is only a linker script.
+    libname = ""
+    for name in ("libcuopt_mathopt", "libcuopt")
+        libname = Libdl.find_library(name)
+        isempty(libname) || break
+    end
     if isempty(libname)
         error(
             "Could not find cuOpt library. Please ensure it is installed and in your system's library path.",

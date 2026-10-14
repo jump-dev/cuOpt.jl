@@ -36,7 +36,7 @@ Note: This version of cuOpt.jl supports the Nvidia cuOpt 26.08 release.
 
 Please refer to the [NVIDIA cuOpt documentation](https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-c/quick-start.html#installation) for installation instructions.
 
-Please ensure the library path for `libcuopt.so` is added to `LD_LIBRARY_PATH`.
+Please ensure the library path for `libcuopt_mathopt.so` (`libcuopt.so` for cuOpt 26.08 and earlier) is added to `LD_LIBRARY_PATH`.
 
 Once cuOpt is installed, add cuOpt.jl as follows:
 ```julia
