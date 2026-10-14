@@ -187,6 +187,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 
     primal_solution::Union{Nothing,Vector{Float64}}
     dual_solution::Union{Nothing,Vector{Float64}}
+    reduced_costs::Union{Nothing,Vector{Float64}}
 
     obj_value::Float64
     termination_status::Int32
@@ -209,6 +210,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 
         model.primal_solution = nothing
         model.dual_solution = nothing
+        model.reduced_costs = nothing
         model.obj_value = 0.0
         model.termination_status = CUOPT_TERMINATION_STATUS_NO_TERMINATION
         return model
@@ -478,7 +480,9 @@ end
 
 function MOI.get(model::Optimizer, ::MOI.ResultCount)
     return Int(
-        model.primal_solution !== nothing || model.dual_solution !== nothing,
+        model.primal_solution !== nothing ||
+            model.dual_solution !== nothing ||
+            model.reduced_costs !== nothing,
     )
 end
 
@@ -496,7 +500,8 @@ end
 
 function MOI.get(model::Optimizer, attr::MOI.DualStatus)
     status = model.termination_status
-    if attr.result_index != 1 || model.dual_solution === nothing
+    if attr.result_index != 1 ||
+       (model.dual_solution === nothing && model.reduced_costs === nothing)
         return MOI.NO_SOLUTION
     elseif status == CUOPT_TERMINATION_STATUS_OPTIMAL
         return MOI.FEASIBLE_POINT
@@ -504,6 +509,48 @@ function MOI.get(model::Optimizer, attr::MOI.DualStatus)
         return MOI.INFEASIBILITY_CERTIFICATE
     end
     return MOI.UNKNOWN_RESULT_STATUS
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    c::MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64},<:_SCALAR_SETS},
+)
+    MOI.check_result_index_bounds(model, attr)
+    if model.dual_solution === nothing
+        throw(
+            MOI.GetAttributeNotAllowed(attr, "No dual solution is available."),
+        )
+    end
+    info = get(model.affine_constraint_info, _ConstraintKey(c.value), nothing)
+    if info === nothing
+        throw(MOI.InvalidIndex(c))
+    end
+    dual = model.dual_solution[info.row+1]
+    return MOI.get(model, MOI.ObjectiveSense()) == MOI.MAX_SENSE ? -dual : dual
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    c::MOI.ConstraintIndex{MOI.VariableIndex,S},
+) where {S<:_SCALAR_SETS}
+    MOI.check_result_index_bounds(model, attr)
+    if model.reduced_costs === nothing
+        throw(
+            MOI.GetAttributeNotAllowed(attr, "No dual solution is available."),
+        )
+    end
+    dual = model.reduced_costs[column(model, c)+1]
+    if MOI.get(model, MOI.ObjectiveSense()) == MOI.MAX_SENSE
+        dual = -dual
+    end
+    if S == MOI.GreaterThan{Float64}
+        return max(0.0, dual)
+    elseif S == MOI.LessThan{Float64}
+        return min(0.0, dual)
+    end
+    return dual
 end
 
 function MOI.get(model::Optimizer, ::MOI.ObjectiveSense)
@@ -625,6 +672,7 @@ function MOI.empty!(model::Optimizer)
     model.objective_sense = nothing
     model.primal_solution = nothing
     model.dual_solution = nothing
+    model.reduced_costs = nothing
     model.obj_value = NaN
     model.termination_status = CUOPT_TERMINATION_STATUS_NO_TERMINATION
 
@@ -1073,6 +1121,7 @@ function _get_objective_data(
     if !(sense in (MOI.MIN_SENSE, MOI.MAX_SENSE))
         throw(MOI.UnsupportedAttribute(MOI.ObjectiveSense()))
     end
+    dest.objective_sense = sense
 
     objective_sense = sense == MOI.MIN_SENSE ? CUOPT_MINIMIZE : CUOPT_MAXIMIZE
 
@@ -1311,6 +1360,7 @@ function MOI.optimize!(model::Optimizer)
     model.obj_value = NaN
     model.primal_solution = nothing
     model.dual_solution = nothing
+    model.reduced_costs = nothing
     ref_solution = Ref{cuOptSolution}()
     ret = cuOptSolve(model.cuopt_problem, model.cuopt_settings, ref_solution)
     _check_ret(ret, "cuOptSolve")
@@ -1336,6 +1386,36 @@ function MOI.optimize!(model::Optimizer)
         model.cuopt_solution,
         num_constraints[],
     )
+    model.reduced_costs = _get_solution(
+        cuOptGetReducedCosts,
+        model.cuopt_solution,
+        _numcols(model),
+    )
+
+    if model.termination_status == CUOPT_TERMINATION_STATUS_INFEASIBLE &&
+       model.dual_solution !== nothing
+        # A certificate has no objective contribution: bound duals are -A'y.
+        nnz = Ref{Int32}()
+        ret = cuOptGetNumNonZeros(model.cuopt_problem, nnz)
+        _check_ret(ret, "cuOptGetNumNonZeros")
+        row_offsets = Vector{Int32}(undef, num_constraints[] + 1)
+        column_indices = Vector{Int32}(undef, nnz[])
+        coefficients = Vector{Float64}(undef, nnz[])
+        ret = cuOptGetConstraintMatrixCSR(
+            model.cuopt_problem,
+            row_offsets,
+            column_indices,
+            coefficients,
+        )
+        _check_ret(ret, "cuOptGetConstraintMatrixCSR")
+        model.reduced_costs = zeros(_numcols(model))
+        for row in 1:_numrows(model)
+            for k in (row_offsets[row]+1):row_offsets[row+1]
+                model.reduced_costs[column_indices[k]+1] -=
+                    coefficients[k] * model.dual_solution[row]
+            end
+        end
+    end
 
     if model.primal_solution !== nothing
         obj_value = Ref{Float64}()

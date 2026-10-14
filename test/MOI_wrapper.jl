@@ -43,18 +43,52 @@ end
 
 function test_runtests_cache_optimizer()
     model = MOI.instantiate(cuOpt.Optimizer; with_cache_type = Float64)
+    config = MOI.Test.Config(;
+        atol = 1e-3,
+        rtol = 1e-3,
+        exclude = Any[
+            MOI.DualObjectiveValue,
+            MOI.ConstraintPrimal,
+            MOI.ConstraintBasisStatus,
+        ],
+    )
+    quadratic_constraints = r"^test_quadratic_(.*constraint|.*SecondOrderCone)"
+    presolve_tests = [
+        r"INFEASIB"i,
+        r"^test_linear_(integer|SOS|Indicator|Semi)",
+        r"^test_solve_.*_IP$",
+    ]
+    # TODO: Re-enable LP presolve once the maximization dual sign bug is fixed:
+    # https://github.com/NVIDIA/cuopt/issues/2146
+    MOI.set(
+        model,
+        MOI.RawOptimizerAttribute(cuOpt.CUOPT_PRESOLVE),
+        cuOpt.CUOPT_PRESOLVE_OFF,
+    )
     MOI.Test.runtests(
         model,
-        MOI.Test.Config(;
-            atol = 1e-3,
-            rtol = 1e-3,
-            exclude = Any[
-                MOI.DualObjectiveValue,
-                MOI.ConstraintPrimal,
-                MOI.ConstraintDual,
-                MOI.ConstraintBasisStatus,
-            ],
-        );
+        config;
+        exclude = [quadratic_constraints; presolve_tests],
+    )
+    # Keep default presolve for MIP tests and certificate tests. Without it,
+    # cuOpt can stall on infeasible MIPs or return placeholder certificates.
+    MOI.set(
+        model,
+        MOI.RawOptimizerAttribute(cuOpt.CUOPT_PRESOLVE),
+        cuOpt.CUOPT_PRESOLVE_DEFAULT,
+    )
+    MOI.Test.runtests(
+        model,
+        config;
+        include = presolve_tests,
+        exclude = [quadratic_constraints],
+    )
+    # cuOpt does not return duals for quadratic constraints.
+    push!(config.exclude, MOI.ConstraintDual)
+    MOI.Test.runtests(
+        model,
+        config;
+        include = [quadratic_constraints],
         # cuOpt's QP solver assumes convexity, so nonconvex QCQP problems are
         # out of scope.
         exclude = ["test_quadratic_nonconvex_constraint_integration"],
