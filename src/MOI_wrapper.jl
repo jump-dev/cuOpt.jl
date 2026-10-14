@@ -1351,6 +1351,7 @@ function MOI.optimize!(model::Optimizer)
         is_mip[] == 0 &&
         !model.has_quadratic_objective &&
         isempty(model.quadratic_constraint_info) &&
+        _numrows(model) > 0 &&
         !(model.termination_status in _NO_PRIMAL_SOLUTION_STATUSES)
     if has_dual_solution
         ret = cuOptGetDualSolution(model.cuopt_solution, model.dual_solution)
