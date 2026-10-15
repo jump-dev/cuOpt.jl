@@ -18,6 +18,12 @@ module TestCCuOpt
 using cuOpt
 using Test
 
+function count_log_messages(message::Ptr{Cchar}, user_data::Ptr{Cvoid})
+    count = Ptr{Cint}(user_data)
+    unsafe_store!(count, unsafe_load(count) + Cint(1))
+    return
+end
+
 function small_test_model()
     cc = [1.0, -2.0]
     cl = [0.0, 0.0]
@@ -91,15 +97,52 @@ function test_Direct_C_call()
     @test ret == 0
     settings = settings_ref[]
 
+    log_count = Ref{Cint}(0)
+    log_callback =
+        @cfunction(count_log_messages, Cvoid, (Ptr{Cchar}, Ptr{Cvoid}))
+    @test cuOpt.cuOptSetLogCallback(settings, log_callback, log_count) ==
+          cuOpt.CUOPT_SUCCESS
+
     solution_ref = Ref{cuOpt.cuOptSolution}()
-    ret = cuOpt.cuOptSolve(problem, settings, solution_ref)
+    ret = GC.@preserve log_count begin
+        cuOpt.cuOptSolve(problem, settings, solution_ref)
+    end
     @test ret == 0
     solution = solution_ref[]
+    @test log_count[] > 0
+    @test cuOpt.cuOptSetLogCallback(settings, C_NULL, C_NULL) ==
+          cuOpt.CUOPT_SUCCESS
 
     termination_status = Ref{Cint}(0)
     ret = cuOpt.cuOptGetTerminationStatus(solution, termination_status)
     @test ret == 0
     @test termination_status[] == cuOpt.CUOPT_TERMINATION_STATUS_OPTIMAL
+
+    iterations = Ref{Cint}(-1)
+    @test cuOpt.cuOptGetSolutionIntAttribute(
+        solution,
+        cuOpt.CUOPT_SOLUTION_ATTR_LP_NUM_ITERATIONS,
+        iterations,
+    ) == cuOpt.CUOPT_SUCCESS
+    @test iterations[] >= 0
+    for attribute in (
+        cuOpt.CUOPT_SOLUTION_ATTR_LP_PRIMAL_RESIDUAL,
+        cuOpt.CUOPT_SOLUTION_ATTR_LP_DUAL_RESIDUAL,
+        cuOpt.CUOPT_SOLUTION_ATTR_LP_GAP,
+    )
+        value = Ref{Cdouble}(NaN)
+        @test cuOpt.cuOptGetSolutionFloatAttribute(
+            solution,
+            attribute,
+            value,
+        ) == cuOpt.CUOPT_SUCCESS
+        @test 0.0 <= value[] <= 1e-3
+    end
+    @test cuOpt.cuOptGetSolutionIntAttribute(
+        solution,
+        cuOpt.CUOPT_SOLUTION_ATTR_MIP_NUM_NODES,
+        iterations,
+    ) == cuOpt.CUOPT_INVALID_ARGUMENT
 
     cuOpt.cuOptDestroySolution(solution_ref)
     cuOpt.cuOptDestroySolverSettings(settings_ref)

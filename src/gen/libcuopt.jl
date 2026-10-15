@@ -16,6 +16,7 @@
 # Disable JuliaFormatter for this file.
 #!format: off
 
+
 """
 A `[`cuOptOptimizationProblem`](@ref)` object contains a representation of an LP, MIP, QP, or QCQP. It is created by `[`cuOptCreateProblem`](@ref)`, `[`cuOptCreateRangedProblem`](@ref)`, or the quadratic create functions. Quadratic objectives and quadratic objectives and constraints may be set via `[`cuOptSetQuadraticObjective`](@ref)` and added via `[`cuOptAddQuadraticConstraint`](@ref)`. It is passed to `[`cuOptSolve`](@ref)` and destroyed with `[`cuOptDestroyProblem`](@ref)`.
 """
@@ -41,7 +42,7 @@ The type of the integer number used by the solver. Use `[`cuOptGetIntSize`](@ref
 """
 const cuopt_int_t = Int32
 
-# no prototype is found for this function at cuopt_c.h:82:8, please use with caution
+# no prototype is found for this function at cuopt_c.h:87:8, please use with caution
 """
     cuOptGetFloatSize()
 
@@ -54,7 +55,7 @@ function cuOptGetFloatSize()
     ccall((:cuOptGetFloatSize, libcuopt), Int8, ())
 end
 
-# no prototype is found for this function at cuopt_c.h:87:8, please use with caution
+# no prototype is found for this function at cuopt_c.h:92:8, please use with caution
 """
     cuOptGetIntSize()
 
@@ -690,6 +691,44 @@ function cuOptGetFloatParameter(settings, parameter_name, parameter_value)
     ccall((:cuOptGetFloatParameter, libcuopt), cuopt_int_t, (cuOptSolverSettings, Ptr{Cchar}, Ptr{cuopt_float_t}), settings, parameter_name, parameter_value)
 end
 
+# typedef void ( * cuOptLogCallback ) ( const char * message , void * user_data )
+"""
+Type of callback invoked once per standard solver log line.
+
+Receives the same lines the solver would print to the console — nothing more. Internal diagnostics (debug and trace messages) are never delivered, and no severity is reported: the callback exists to display or forward solver output, not to let callers classify or branch on it.
+
+!!! note
+
+    Invoked from the calling thread for a local solve, and from an internal log-streaming thread when the solve runs on a remote server. Do not call back into cuOpt from inside the callback.
+
+!!! warning
+
+    Log message formatting is not part of the stable API and may change between releases. The callback is intended for display purposes (GUI integration, log forwarding, stdout capture) — do not parse message content for programmatic control flow.
+
+# Arguments
+* `message`: Null-terminated log line without trailing newline.
+* `user_data`: Opaque pointer passed to [`cuOptSetLogCallback`](@ref).
+"""
+const cuOptLogCallback = Ptr{Cvoid}
+
+"""
+    cuOptSetLogCallback(settings, callback, user_data)
+
+Register a callback to receive solver log messages.
+
+The callback is invoked once per log line. It is called in addition to any file or console sink already enabled via ``log_to_console`` / ``log_file`` parameters. Pass NULL to remove a previously registered callback.
+
+# Arguments
+* `settings`:\\[in\\] The solver settings object.
+* `callback`:\\[in\\] Callback function, or NULL to clear.
+* `user_data`:\\[in\\] Opaque pointer forwarded to the callback unchanged.
+# Returns
+A status code indicating success or failure.
+"""
+function cuOptSetLogCallback(settings, callback, user_data)
+    ccall((:cuOptSetLogCallback, libcuopt), cuopt_int_t, (cuOptSolverSettings, cuOptLogCallback, Ptr{Cvoid}), settings, callback, user_data)
+end
+
 # typedef void ( * cuOptMIPGetSolutionCallback ) ( const cuopt_float_t * solution , const cuopt_float_t * objective_value , const cuopt_float_t * solution_bound , void * user_data )
 """
 Type of callback for receiving incumbent MIP solutions with user context.
@@ -749,7 +788,7 @@ Register a callback to inject MIP solutions.
 
 !!! note
 
-    Registering a set-solution callback disables presolve.
+    Registration preserves the configured presolve setting. Dual presolve reductions are disabled so injected feasible solutions remain representable. Supply values in the original variable order and the objective value in the original model's units. The solver transforms injected solutions into its presolved representation.
 
 !!! note
 
@@ -1014,6 +1053,38 @@ function cuOptGetReducedCosts(solution, reduced_cost_ptr)
 end
 
 """
+    cuOptGetSolutionIntAttribute(solution, attribute, value_out)
+
+Get a scalar integer solution attribute (a CUOPT\\_SOLUTION\\_ATTR\\_* with an integer value: iteration counts, node counts, or the method that solved the problem).
+
+# Arguments
+* `solution`:\\[in\\] - The solution object.
+* `attribute`:\\[in\\] - The attribute selector.
+* `value_out`:\\[out\\] - A pointer to a [`cuopt_int_t`](@ref) that on output will contain the value.
+# Returns
+A status code indicating success or failure. Returns [`CUOPT_INVALID_ARGUMENT`](@ref) if the selector is unknown, does not have an integer value, or does not apply to this solution's problem class.
+"""
+function cuOptGetSolutionIntAttribute(solution, attribute, value_out)
+    ccall((:cuOptGetSolutionIntAttribute, libcuopt), cuopt_int_t, (cuOptSolution, cuopt_int_t, Ptr{cuopt_int_t}), solution, attribute, value_out)
+end
+
+"""
+    cuOptGetSolutionFloatAttribute(solution, attribute, value_out)
+
+Get a scalar floating-point solution attribute (a CUOPT\\_SOLUTION\\_ATTR\\_* with a floating-point value: residuals, gap, presolve time, or violation magnitudes).
+
+# Arguments
+* `solution`:\\[in\\] - The solution object.
+* `attribute`:\\[in\\] - The attribute selector.
+* `value_out`:\\[out\\] - A pointer to a [`cuopt_float_t`](@ref) that on output will contain the value.
+# Returns
+A status code indicating success or failure. Returns [`CUOPT_INVALID_ARGUMENT`](@ref) if the selector is unknown, does not have a floating-point value, or does not apply to this solution's problem class.
+"""
+function cuOptGetSolutionFloatAttribute(solution, attribute, value_out)
+    ccall((:cuOptGetSolutionFloatAttribute, libcuopt), cuopt_int_t, (cuOptSolution, cuopt_int_t, Ptr{cuopt_float_t}), solution, attribute, value_out)
+end
+
+"""
     cuOptGetProblemIntAttribute(problem, attribute, value_out)
 
 Get a scalar integer problem attribute (a CUOPT\\_ATTR\\_* with an integer value).
@@ -1098,6 +1169,8 @@ const CUOPT_PDLP_SOLVER_MODE = "pdlp_solver_mode"
 
 const CUOPT_METHOD = "method"
 
+const CUOPT_LARGE_NNZ_THRESHOLD = "large_nnz_threshold"
+
 const CUOPT_PER_CONSTRAINT_RESIDUAL = "per_constraint_residual"
 
 const CUOPT_SAVE_BEST_PRIMAL_SO_FAR = "save_best_primal_so_far"
@@ -1122,7 +1195,15 @@ const CUOPT_BARRIER_DUAL_INITIAL_POINT = "barrier_dual_initial_point"
 
 const CUOPT_POSTSOLVE_INFO = "postsolve_info"
 
+const CUOPT_BARRIER_PRESOLVE_BOUND_FREE_VARIABLES = "barrier_presolve_bound_free_variables"
+
 const CUOPT_BARRIER_ITERATIVE_REFINEMENT = "barrier_iterative_refinement"
+
+const CUOPT_BARRIER_ADAPTIVE_REGULARIZATION = "barrier_adaptive_regularization"
+
+const CUOPT_BARRIER_PRIMAL_REGULARIZATION = "barrier_primal_regularization"
+
+const CUOPT_BARRIER_DUAL_REGULARIZATION = "barrier_dual_regularization"
 
 const CUOPT_BARRIER_STEP_SCALE = "barrier_step_scale"
 
@@ -1132,9 +1213,17 @@ const CUOPT_CUDSS_DETERMINISTIC = "cudss_deterministic"
 
 const CUOPT_PRESOLVE = "presolve"
 
+const CUOPT_DUAL_SIMPLEX_INITIAL_PERTURBATION = "dual_simplex_initial_perturbation"
+
+const CUOPT_DUAL_SIMPLEX_REMOVE_PERTURBATION = "dual_simplex_remove_perturbation"
+
+const CUOPT_PRIMAL_SIMPLEX_PRICING = "primal_simplex_pricing"
+
 const CUOPT_MIP_PROBING = "mip_probing"
 
 const CUOPT_DUAL_POSTSOLVE = "dual_postsolve"
+
+const CUOPT_SEQUENCE_SOLVE = "sequence_solve"
 
 const CUOPT_MIP_DETERMINISM_MODE = "mip_determinism_mode"
 
@@ -1178,7 +1267,17 @@ const CUOPT_MIP_STRONG_CHVATAL_GOMORY_CUTS = "mip_strong_chvatal_gomory_cuts"
 
 const CUOPT_MIP_REDUCED_COST_STRENGTHENING = "mip_reduced_cost_strengthening"
 
+const CUOPT_MIP_DUAL_DEGENERATE_FEASIBILITY_PUMP = "mip_dual_degenerate_feasibility_pump"
+
+const CUOPT_MIP_PRIMAL_DEGENERATE_PIVOTS = "mip_primal_degenerate_pivots"
+
+const CUOPT_MIP_DUAL_DEGENERATE_PIVOTS = "mip_dual_degenerate_pivots"
+
 const CUOPT_MIP_RINS = "mip_rins"
+
+const CUOPT_MIP_RENS = "mip_rens"
+
+const CUOPT_MIP_MUTATION = "mip_mutation"
 
 const CUOPT_MIP_OBJECTIVE_STEP = "mip_objective_step"
 
@@ -1198,9 +1297,7 @@ const CUOPT_NUM_CPU_THREADS = "num_cpu_threads"
 
 const CUOPT_NUM_GPUS = "num_gpus"
 
-const CUOPT_DISTRIBUTED_PDLP_PARTITIONER = "distributed_pdlp_partitioner"
-
-const CUOPT_USE_DISTRIBUTED_PDLP = "use_distributed_pdlp"
+const CUOPT_MULTIGPU_PDLP_PARTITIONER = "multigpu_pdlp_partitioner"
 
 const CUOPT_USER_PROBLEM_FILE = "user_problem_file"
 
@@ -1216,9 +1313,9 @@ const CUOPT_MIP_HYPER_HEURISTIC_POPULATION_SIZE = "mip_hyper_heuristic_populatio
 
 const CUOPT_MIP_HYPER_HEURISTIC_NUM_CPUFJ_THREADS = "mip_hyper_heuristic_num_cpufj_threads"
 
-const CUOPT_MIP_HYPER_HEURISTIC_PRESOLVE_TIME_RATIO = "mip_hyper_heuristic_presolve_time_ratio"
+const CUOPT_MIP_HYPER_HEURISTIC_PRESOLVE_MAX_ROUNDS = "mip_hyper_heuristic_presolve_max_rounds"
 
-const CUOPT_MIP_HYPER_HEURISTIC_PRESOLVE_MAX_TIME = "mip_hyper_heuristic_presolve_max_time"
+const CUOPT_MIP_HYPER_HEURISTIC_PAPILO_PROBING_MAX_BADGESIZE = "mip_hyper_heuristic_papilo_probing_max_badgesize"
 
 const CUOPT_MIP_HYPER_HEURISTIC_ROOT_LP_TIME_RATIO = "mip_hyper_heuristic_root_lp_time_ratio"
 
@@ -1258,8 +1355,6 @@ const CUOPT_MIP_HYPER_DIVING_FARKAS = "mip_hyper_diving_farkas"
 
 const CUOPT_MIP_HYPER_DIVING_VECTOR_LENGTH = "mip_hyper_diving_vector_length"
 
-const CUOPT_MIP_HYPER_DIVING_MIN_NODE_DEPTH = "mip_hyper_diving_min_node_depth"
-
 const CUOPT_MIP_HYPER_DIVING_NODE_LIMIT = "mip_hyper_diving_node_limit"
 
 const CUOPT_MIP_HYPER_DIVING_ITERATION_LIMIT_FACTOR = "mip_hyper_diving_iteration_limit_factor"
@@ -1276,15 +1371,33 @@ const CUOPT_MIP_HYPER_SUBMIP_MIN_FIXRATE_CAP = "mip_hyper_submip_min_fixrate_cap
 
 const CUOPT_MIP_HYPER_SUBMIP_TARGET_MIP_GAP = "mip_hyper_submip_target_mip_gap"
 
-const CUOPT_MIP_HYPER_SUBMIP_NODE_LIMIT_BASE = "mip_hyper_submip_node_limit_base"
+const CUOPT_MIP_HYPER_SUBMIP_NODE_LIMIT_OFFSET = "mip_hyper_submip_node_limit_offset"
+
+const CUOPT_MIP_HYPER_SUBMIP_ITERATION_LIMIT_OFFSET = "mip_hyper_submip_iteration_limit_offset"
 
 const CUOPT_MIP_HYPER_SUBMIP_MAX_LEVEL = "mip_hyper_submip_max_level"
 
 const CUOPT_MIP_HYPER_SUBMIP_ITERATION_LIMIT_RATIO = "mip_hyper_submip_iteration_limit_ratio"
 
+const CUOPT_MIP_HYPER_SUBMIP_ROUND_CLOSE_RATIO = "mip_hyper_submip_round_close_ratio"
+
 const CUOPT_MIP_HYPER_SUBMIP_ENABLE_CPUFJ = "mip_hyper_submip_enable_cpufj"
 
+const CUOPT_MIP_HYPER_BLOCK_BVE = "mip_hyper_block_bve"
+
+const CUOPT_MIP_HYPER_PRESOLVE_INDICATOR_STRENGTHENING = "mip_hyper_presolve_indicator_strengthening"
+
 const CUOPT_QCQP_HYPER_RUIZ_EQUILIBRATION = "qcqp_hyper_ruiz_equilibration"
+
+const CUOPT_BARRIER_HYPER_GPU_RUIZ_NNZ_THRESHOLD = "barrier_hyper_gpu_ruiz_nnz_threshold"
+
+const CUOPT_PDLP_HYPER_ENABLE_CURTIS_REID_SCALING = "pdlp_hyper_enable_curtis_reid_scaling"
+
+const CUOPT_PDLP_HYPER_REDUCED_MATRIX = "pdlp_hyper_reduced_matrix"
+
+const CUOPT_PDLP_HYPER_PROJECT_INITIAL_PRIMAL = "pdlp_hyper_project_initial_primal"
+
+const CUOPT_BARRIER_INITIAL_POINT_SAFEGUARD = "barrier_initial_point_safeguard"
 
 const CUOPT_MODE_OPPORTUNISTIC = 0
 
@@ -1350,7 +1463,17 @@ const CUOPT_METHOD_DUAL_SIMPLEX = 2
 
 const CUOPT_METHOD_BARRIER = 3
 
-const CUOPT_METHOD_UNSET = 4
+const CUOPT_METHOD_PRIMAL_SIMPLEX = 4
+
+const CUOPT_METHOD_UNSET = 5
+
+const CUOPT_BARRIER_DUAL_INITIAL_POINT_AUTOMATIC = -1
+
+const CUOPT_BARRIER_DUAL_INITIAL_POINT_LUSTIG_MARSTEN_SHANNO = 0
+
+const CUOPT_BARRIER_DUAL_INITIAL_POINT_LEAST_SQUARES = 1
+
+const CUOPT_BARRIER_DUAL_INITIAL_POINT_SEDUMI_MU = 2
 
 const CUOPT_PDLP_DEFAULT_PRECISION = -1
 
@@ -1359,6 +1482,12 @@ const CUOPT_PDLP_SINGLE_PRECISION = 0
 const CUOPT_PDLP_DOUBLE_PRECISION = 1
 
 const CUOPT_PDLP_MIXED_PRECISION = 2
+
+const CUOPT_PDLP_REDUCED_MATRIX_DEFAULT = -1
+
+const CUOPT_PDLP_REDUCED_MATRIX_OFF = 0
+
+const CUOPT_PDLP_REDUCED_MATRIX_COLUMN_REDUCTION = 1
 
 const CUOPT_FILE_FORMAT_MPS = 0
 
@@ -1384,11 +1513,11 @@ const CUOPT_PRESOLVE_PAPILO = 1
 
 const CUOPT_PRESOLVE_PSLP = 2
 
-const CUOPT_DISTRIBUTED_PDLP_PARTITIONER_AUTO = 0
+const CUOPT_MULTIGPU_PDLP_PARTITIONER_AUTO = 0
 
-const CUOPT_DISTRIBUTED_PDLP_PARTITIONER_KAMINPAR = 1
+const CUOPT_MULTIGPU_PDLP_PARTITIONER_KAMINPAR = 1
 
-const CUOPT_DISTRIBUTED_PDLP_PARTITIONER_ROUND_ROBIN = 2
+const CUOPT_MULTIGPU_PDLP_PARTITIONER_ROUND_ROBIN = 2
 
 const CUOPT_MIP_SCALING_OFF = 0
 
@@ -1422,6 +1551,10 @@ const CUOPT_ATTR_HAS_QUADRATIC_OBJECTIVE = 9
 
 const CUOPT_ATTR_HAS_QUADRATIC_CONSTRAINTS = 10
 
+const CUOPT_ATTR_NUM_LINEAR_CONSTRAINTS = 11
+
+const CUOPT_ATTR_NUM_QUADRATIC_CONSTRAINTS = 12
+
 const CUOPT_ARRAY_ATTR_OBJECTIVE_COEFFICIENTS = 100
 
 const CUOPT_ARRAY_ATTR_VARIABLE_LOWER_BOUNDS = 101
@@ -1441,3 +1574,27 @@ const CUOPT_ARRAY_ATTR_VARIABLE_TYPES = 107
 const CUOPT_STRING_ARRAY_VARIABLE_NAMES = 200
 
 const CUOPT_STRING_ARRAY_ROW_NAMES = 201
+
+const CUOPT_SOLUTION_ATTR_LP_PRIMAL_RESIDUAL = 300
+
+const CUOPT_SOLUTION_ATTR_LP_DUAL_RESIDUAL = 301
+
+const CUOPT_SOLUTION_ATTR_LP_GAP = 302
+
+const CUOPT_SOLUTION_ATTR_LP_NUM_ITERATIONS = 303
+
+const CUOPT_SOLUTION_ATTR_LP_SOLVED_BY = 304
+
+const CUOPT_SOLUTION_ATTR_MIP_PRESOLVE_TIME = 305
+
+const CUOPT_SOLUTION_ATTR_MIP_NUM_NODES = 306
+
+const CUOPT_SOLUTION_ATTR_MIP_NUM_SIMPLEX_ITERATIONS = 307
+
+const CUOPT_SOLUTION_ATTR_MIP_MAX_CONSTRAINT_VIOLATION = 308
+
+const CUOPT_SOLUTION_ATTR_MIP_MAX_INT_VIOLATION = 309
+
+const CUOPT_SOLUTION_ATTR_MIP_MAX_VARIABLE_BOUND_VIOLATION = 310
+
+# Skipping MacroDefinition: CUOPT_EXPORT __attribute__ ( ( visibility ( "default" ) ) )

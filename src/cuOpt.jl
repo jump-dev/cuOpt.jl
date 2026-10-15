@@ -21,7 +21,7 @@ using Libdl
 # ccall on the first call.
 #
 # We don't use `find_library` in the global scope because that path will get
-# cached into the precompile file, and we won't search for libcuopt on
+# cached into the precompile file, and we won't search for libcuopt_mathopt on
 # subsequent `using cuOpt`. The value gets set in `__init__` instead.
 global libcuopt
 
@@ -29,13 +29,20 @@ function __init__()
     if get(ENV, "JULIA_REGISTRYCI_AUTOMERGE", "false") == "true"
         return  # Skip. The package won't work, but it can be loaded.
     end
-    libname = Libdl.find_library("libcuopt")
+    libname = Libdl.find_library("libcuopt_mathopt")
     if isempty(libname)
         error(
-            "Could not find cuOpt library. Please ensure it is installed and in your system's library path.",
+            "Could not find libcuopt_mathopt. Please ensure cuOpt 26.10 is installed and in your system's library path.",
         )
     end
     global libcuopt = Libdl.dlpath(libname)
+    int_size = @ccall libcuopt.cuOptGetIntSize()::Int8
+    float_size = @ccall libcuopt.cuOptGetFloatSize()::Int8
+    if int_size != sizeof(Int32) || float_size != sizeof(Float64)
+        error(
+            "Incompatible cuOpt library types. Got $int_size-byte integers and $float_size-byte floats, but cuOpt.jl requires 4-byte integers and 8-byte floats.",
+        )
+    end
     major, minor, patch = Ref{Int32}(0), Ref{Int32}(0), Ref{Int32}(0)
     status = @ccall libcuopt.cuOptGetVersion(
         major::Ptr{Int32},
@@ -45,8 +52,12 @@ function __init__()
     if status != 0
         error("Failed to get cuOpt library version (status code: $status)")
     end
-    version = VersionNumber(major[], minor[], patch[])
-    min, max = v"26.08", v"26.09"
+    _check_version(VersionNumber(major[], minor[], patch[]))
+    return
+end
+
+function _check_version(version::VersionNumber)
+    min, max = v"26.10", v"26.11"
     if !(min <= version < max)
         error(
             "Incompatible cuOpt library version. Got $version, but supported versions are [$min, $max)",

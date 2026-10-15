@@ -25,6 +25,7 @@ build!(
             get_default_args(),
             "-I$cuopt_include",
             "-DCUOPT_INSTANTIATE_DOUBLE",
+            "-DCUOPT_INSTANTIATE_INT32",
         ),
         load_options(joinpath(@__DIR__, "generate.toml")),
     ),
